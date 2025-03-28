@@ -1,0 +1,38 @@
+# Install ESLint and plugins
+npm install @eslint/js@9.23.0 eslint@9.23.0 eslint-plugin-react-hooks@5.2.0 eslint-plugin-react-refresh@0.4.19 globals@15.15.0
+
+# Install Tailwind CSS and Vite plugin
+npm install tailwindcss@4.0.16 @tailwindcss/vite@4.0.16
+
+# Install React and related libraries
+npm install react@19.0.0 react-dom@19.0.0 @types/react@19.0.12 @types/react-dom@19.0.4
+
+# Install React Router
+npm install react-router-dom@7.4.0
+
+# Install React Query
+npm install @tanstack/react-query@5.69.0
+
+# Install Date Handling Library
+npm install date-fns@4.1.0
+
+# Install UI and Animation Libraries
+npm install framer-motion@12.6.2 lucide-react@0.484.0 react-datepicker@8.2.1
+
+# Install Debounce Hook
+npm install use-debounce@10.0.4
+
+# Install Vite and React Plugin
+npm install vite@6.2.3 @vitejs/plugin-react@4.3.4
+
+# Initialize a new Vite project
+npm create vite@latest my-project --template react
+
+# Navigate into the project directory
+cd my-project
+
+# Install all dependencies inside the project
+npm install
+
+# Start the development server
+npm run dev
