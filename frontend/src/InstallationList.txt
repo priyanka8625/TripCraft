@@ -1,0 +1,14 @@
+npm install
+npm install @eslint/js eslint eslint-plugin-react-hooks eslint-plugin-react-refresh globals
+npm install tailwindcss @tailwindcss/vite
+npm install react react-dom @types/react @types/react-dom
+npm install react-router-dom
+npm install @tanstack/react-query
+npm install date-fns
+npm install framer-motion lucide-react react-datepicker
+npm install use-debounce
+npm install vite @vitejs/plugin-react
+
+
+
+npm run dev
