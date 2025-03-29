@@ -99,6 +99,30 @@ def get_location_coordinates(destination):
     raise Exception(f"Failed to fetch location coordinates: {response.json()}")
 
 
+def get_unsplash_image(query):
+    """
+    Fetches an image URL from Unsplash API.
+    """
+    global unsplash_calls_this_hour
+    
+    # Check Unsplash hourly limit
+    reset_api_counters()
+    
+    if unsplash_calls_this_hour >= UNSPLASH_HOURLY_LIMIT:
+        raise APILimitError("Unsplash API hourly limit reached.")
+    
+    url = f"https://api.unsplash.com/search/photos?query={query}&client_id={UNSPLASH_KEY}"
+    
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        unsplash_calls_this_hour += 1
+        results = response.json().get('results', [])
+        return results[0].get('urls', {}).get('small') if results else None
+    else:
+        raise Exception(f"Failed to fetch image from Unsplash: {response.json()}")
+
+
 def get_amadeus_pois(latitude, longitude):
     """Fetches Points of Interest (POIs) from Amadeus API using latitude and longitude."""
     global amadeus_calls_today
@@ -175,7 +199,7 @@ def generate_itinerary(start_date, days, destination):
                     'name': poi['name'],
                     'description': poi.get('description', ''),
                     'rating': poi.get('rating', 'N/A'),
-                    'image': None  # Placeholder for image fetching logic
+                    'image': get_unsplash_image(poi['name'])  # Placeholder for image fetching logic
                 }
                 day_plan['activities'].append(poi_data)
             
@@ -193,7 +217,8 @@ def generate_itinerary(start_date, days, destination):
 
 # Example Usage
 if __name__ == "__main__":
-    
+    # print(get_unsplash_image("solapur"))
+
     start_date = input("Enter start date (YYYY-MM-DD): ")
     days = int(input("Enter number of days for the trip: "))
     destination = input("Enter destination city (e.g., Paris): ")

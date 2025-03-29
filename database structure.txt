@@ -1,0 +1,97 @@
+
+Users Collection
+{
+    "_id": ObjectId,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password_hash": "hashed_password",
+    "phone": "+1234567890",
+    "created_at": ISODate("2024-03-03T12:00:00Z")
+}
+
+Trips Collection
+{
+    "_id": ObjectId,
+    "user_id": ObjectId,
+    "title":String
+    "destination": "Paris",
+    "start_date": ISODate("2024-06-10"),
+    "end_date": ISODate("2024-06-20"),
+    "budget": 1500.00,
+    "is_ai_generated":Boolean
+    "status": "Planned",  // Options: Planned, Ongoing, Completed
+    "collaborators": [
+    { "user_id": ObjectId("user2_id"), "role": "editor" }
+    ]
+    "created_at": ISODate("2024-03-03T12:00:00Z")
+}
+
+Itinerary Collection
+{
+    "_id": ObjectId,
+    "trip_id": ObjectId,
+     
+    "activities": [
+        {
+	    "date":ISODate("2024-06-10"),
+            "name": "Visit Eiffel Tower",
+            "location": "Paris, France",
+            "time_slot": "10:00 AM - 12:00 PM",
+            "estimated_cost": 20.00
+        },
+        {
+
+	    "date":ISODate("2024-06-10"),
+            "name": "Lunch at Le Jules Verne",
+            "location": "Eiffel Tower",
+            "time_slot": "12:30 PM - 2:00 PM",
+            "estimated_cost": 100.00
+        }
+    ]
+}
+
+Budget Tracking
+{
+  "_id": ObjectId("budget_id"),
+  "user_id": ObjectId("user_id"),
+  "itinerary_id": ObjectId("itinerary_id"),
+  "total_budget": 1500,
+  "spent": 850,
+  "expenses": [
+    { "category": "Food", "amount": 100, "date": "2025-06-10" },
+    { "category": "Transport", "amount": 50, "date": "2025-06-11" }
+  ],
+  "created_at": ISODate("2025-03-02T12:00:00Z")
+}
+
+Reviews
+{
+  "_id": ObjectId("review_id"),
+  "user_id": ObjectId("user_id"),
+  "itinerary_id": ObjectId("itinerary_id"),
+  "rating": 4.5,
+  "comment": "Great AI-generated itinerary! It covered all major spots efficiently.",
+  "created_at": ISODate("2025-03-02T12:00:00Z")
+}
+
+Snap Safari
+{
+  "_id": ObjectId("post_id"),
+  "user_id": ObjectId("user_id"),
+  "destination": "Tokyo",
+  "title": "Exploring Tokyo at Night!",
+  "description": "Visited Shibuya Crossing, tried some amazing sushi, and saw the Tokyo Tower lit up!",
+  "images": ["tokyo1.jpg", "tokyo2.jpg"],
+  "likes": 150,
+  "comments": [
+    { "user_id": ObjectId("user2_id"), "comment": "Wow! Looks amazing!" }
+  ],
+  "created_at": ISODate("2025-03-02T12:00:00Z")
+}
+
+
+multiple destinations
+dates
+budget
+no of people
+purpose of trip
