@@ -47,13 +47,13 @@ const Posts = () => {
     <div className="py-12 px-5 bg-gray-50 text-center -mb-40">
       {/* Main Heading and Tagline */}
       <h1 className="text-4xl md:text-5xl font-bold uppercase text-gray-800 mb-4">
-        The Summit is What Drives Us,
+        Post of our Snap Safari Users
       </h1>
       <p className="text-xl md:text-2xl uppercase text-gray-600 mb-3">
-        But the Climb is What Matters.
+        The Summit is What Drives Us,
       </p>
       <p className="uppercase text-gray-600 mb-4">
-        Post of our Snap Safari Users
+        But the Climb is What Matters.
       </p>
       {/* First Row: Two Larger Images Side by Side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto mb-6">
