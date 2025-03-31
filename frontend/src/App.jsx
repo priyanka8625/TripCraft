@@ -3,16 +3,19 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './components/Home';
 import ServiceSection from './components/ServiceSection';
-import Login from './components/Login';
+import Login from './pages/Login';
 import Reviews from './components/Reviews';
-import PlanItineraryWithProvider from './components/PlanItinerary';
+import PlanItineraryWithProvider from './pages/PlanItinerary';
 import BlogPostList from './components/BlogPostCard';
 import Footer from './components/Footer';
+import Signup from './pages/Signup';
+import { Toaster } from 'react-hot-toast';
 function App() {
   return (
     <Router>
       <div className="relative">
         <Navbar />
+        <Toaster position="top-right" />
         <Routes>
           <Route path="/" element={
             <>
@@ -24,6 +27,7 @@ function App() {
             </>
           } />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/plan" element={<PlanItineraryWithProvider />} /> {/* Add this */}
         </Routes>
       </div>
