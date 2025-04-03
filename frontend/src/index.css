@@ -1,1 +1,26 @@
-@import "tailwindcss";
+@import '@fontsource/poppins/300.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/600.css';
+@import '@fontsource/poppins/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+.sidebar-item {
+  @apply flex items-center px-6 py-3 text-gray-600 transition-all duration-200 hover:bg-emerald-50 hover:text-emerald-600 relative;
+}
+
+.sidebar-item.active {
+  @apply text-emerald-600 bg-emerald-50 font-medium;
+}
+
+.sidebar-item.active::before {
+  content: '';
+  @apply absolute left-0 top-0 h-full w-1 bg-emerald-600 rounded-r;
+}

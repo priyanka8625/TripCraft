@@ -4,11 +4,12 @@ import { Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { googleSignup } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
-
+  const navigate = useNavigate();
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -64,6 +65,7 @@ const Login = () => {
             
             toast.success("Google signup successful!");
             console.log("User Data:", credential);
+            navigate('/dashboard'); // ✅ Redirect to Dashboard
         } catch (error) {
             toast.error("Google signup failed!");
         }
