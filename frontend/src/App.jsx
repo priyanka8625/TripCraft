@@ -10,15 +10,16 @@ import BlogPostList from './components/BlogPostCard';
 import Footer from './components/Footer';
 import Signup from './pages/Signup';
 import { Toaster } from 'react-hot-toast';
+import Dashboard from './pages/Dashboard/Dashboard';
 function App() {
   return (
     <Router>
       <div className="relative">
-        <Navbar />
         <Toaster position="top-right" />
         <Routes>
           <Route path="/" element={
             <>
+              <Navbar />
               <Home />
               <ServiceSection />
               <Reviews />
@@ -28,7 +29,8 @@ function App() {
           } />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/plan" element={<PlanItineraryWithProvider />} /> {/* Add this */}
+          <Route path="/plan" element={<PlanItineraryWithProvider />} /> 
+          <Route path="/dashboard/*" element={<Dashboard />} />
         </Routes>
       </div>
     </Router>
