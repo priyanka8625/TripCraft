@@ -41,14 +41,19 @@ const Login = () => {
       console.log('Login Data:', loginData);
 
       // Call backend API here with loginData
-      const response = await login(loginData.email, loginData.password);
-      console.log('Response:', response);
-      if(response.status === 200){
-        toast.success('Login successful!');
-        navigate('/dashboard');
-      }
-      else{
-        toast.error('Login failed!');
+      try {
+        const response = await login(loginData.email, loginData.password);
+        console.log('Response:', response);
+  
+        if (response.status === 200) {
+          toast.success('Login successful!');
+          navigate('/dashboard');
+        } else {
+          toast.error('Login failed!');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        toast.error('Login failed. Please try again.');
       }
     }
   };
