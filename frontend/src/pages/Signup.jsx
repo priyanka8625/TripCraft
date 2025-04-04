@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import { googleSignup } from '../services/authService';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -56,30 +54,17 @@ const Signup = () => {
     setErrors({ ...errors, [e.target.name]: '' });
   };
 
-//   const handleGoogleSignup = () => {
-//     toast.loading('Connecting to Google...');
-//     // Implement Google signup logic here
-//   };
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
 
     const handleGoogleSignup = async (response) => {
-        try {
-            const { credential } = response;
-            // const userData = await googleSignup(credential);
-            // if (userData.isNewUser) {
-            //     toast.success(`Welcome, ${userData.name}! Account created successfully.`);
-            // } else {
-            //     toast.success(`Welcome back, ${userData.name}!`);
-            // }
-            // console.log("userData", userData);
-
-            toast.success("Google signup successful!");
-            console.log("User Data:", credential);
-        } catch (error) {
-            toast.error("Google signup failed!");
-        }
-    };
+      try {
+          window.location.href = '/api/auth/google'; // Backend handles OAuth
+          toast.success("Google signup successful!");
+      } catch (error) {
+          toast.error("Google signup failed!");
+      }
+  };
 
   return (
     <div className="min-h-screen pt-29 bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-4">
@@ -89,19 +74,14 @@ const Signup = () => {
           <p className="text-gray-500">Join us and start planning your next adventure</p>
         </div>
 
-        {/* <button
+        <button
           onClick={handleGoogleSignup}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-150"
         >
           <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
           <span className="text-gray-700">Continue with Google</span>
-        </button> */}
-        <GoogleOAuthProvider clientId={clientId}>
-            <GoogleLogin
-                onSuccess={handleGoogleSignup}
-                onError={() => toast.error("Google login failed!")}
-            />
-        </GoogleOAuthProvider>
+        </button> 
+       
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">

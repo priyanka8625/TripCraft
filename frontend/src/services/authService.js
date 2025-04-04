@@ -1,13 +1,12 @@
-import axios from 'axios';
+// src/services/authService.js
+import api from './api';
 
-const API_BASE_URL = 'http://localhost:8080/auth';
+export const login = async (username, password) => {
+  const response = await api.post('/auth/login', { username, password });
+  return response; // "login successful"
+};
 
-export const googleSignup = async (token) => {
-    try {
-        const response = await axios.post(`${API_BASE_URL}/google`, { token });
-        return response.data;
-    } catch (error) {
-        console.error("Google Signup Error:", error);
-        throw error;
-    }
+export const logout = async () => {
+  const response = await api.post('/auth/logout');
+  return response; // "logout successful"
 };

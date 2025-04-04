@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
-import { googleSignup } from '../services/authService';
+import { login } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
@@ -32,7 +31,7 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
       const loginData = {
@@ -40,32 +39,25 @@ const Login = () => {
         password: formData.password,
       };
       console.log('Login Data:', loginData);
-      toast.success('Login successful!');
+
       // Call backend API here with loginData
+      const response = await login(loginData.email, loginData.password);
+      console.log('Response:', response);
+      if(response.status === 200){
+        toast.success('Login successful!');
+        navigate('/dashboard');
+      }
+      else{
+        toast.error('Login failed!');
+      }
     }
   };
 
-//   const handleGoogleLogin = () => {
-//     toast.loading('Connecting to Google...');
-//     // Implement Google login logic here
-//   };
-
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
     const handleGoogleSignup = async (response) => {
         try {
-            const { credential } = response;
-            // const userData = await googleSignup(credential);
-            // if (userData.isNewUser) {
-            //     toast.success(`Welcome, ${userData.name}! Account created successfully.`);
-            // } else {
-            //     toast.success(`Welcome back, ${userData.name}!`);
-            // }
-            // console.log("userData", userData);
-            
-            toast.success("Google signup successful!");
-            console.log("User Data:", credential);
-            navigate('/dashboard'); // ✅ Redirect to Dashboard
+            window.location.href = '/api/auth/google'; // Backend handles OAuth
+            toast.success("Google signin successful!");
         } catch (error) {
             toast.error("Google signup failed!");
         }
@@ -78,21 +70,15 @@ const Login = () => {
           <h1 className="text-3xl font-bold text-gray-900">Welcome back</h1>
           <p className="text-gray-500">Sign in to continue your journey</p>
         </div>
-{/* 
+
         <button
           onClick={handleGoogleLogin}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-150"
         >
           <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
           <span className="text-gray-700">Continue with Google</span>
-        </button> */}
+        </button> 
 
-        <GoogleOAuthProvider clientId={clientId}>
-            <GoogleLogin
-                onSuccess={handleGoogleSignup}
-                onError={() => toast.error("Google login failed!")}
-            />
-        </GoogleOAuthProvider>
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
