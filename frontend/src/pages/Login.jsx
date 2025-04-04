@@ -98,7 +98,7 @@ const Login = () => {
           </div>
         </div>
 
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700" htmlFor="email">Email</label>
             <div className="relative">
@@ -142,7 +142,7 @@ const Login = () => {
           </div>
 
           <button type="submit" className="w-full bg-emerald-600 text-white py-2.5 rounded-lg hover:bg-emerald-700 transition duration-150 flex items-center justify-center gap-2">
-            Sign in <ArrowRight className="w-4 h-4" onClick={handleSubmit}/>
+            Sign in <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
