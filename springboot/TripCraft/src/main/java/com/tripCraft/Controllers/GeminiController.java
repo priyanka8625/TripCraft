@@ -1,6 +1,9 @@
 package com.tripCraft.Controllers;
 
+import java.io.IOException;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,15 +20,20 @@ public class GeminiController {
     private GeminiService geminiService;
 
     @PostMapping("/generate")
-    public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
-        try {
-            String prompt = buildPrompt(request);
-            String jsonResponse = geminiService.getGeminiResponse(prompt);
-            return ResponseEntity.ok().body(jsonResponse);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error generating itinerary: " + e.getMessage());
-        }
+public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
+    try {
+        String prompt = buildPrompt(request);
+        String jsonResponse = geminiService.getGeminiResponse(prompt);
+
+        System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
+
+        return ResponseEntity.ok().body(jsonResponse);
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("{\"error\": \"" + e.getMessage() + "\"}");
     }
+}
 
     private String buildPrompt(ItineraryRequest request) {
         return String.format("""
@@ -57,4 +65,6 @@ public class GeminiController {
             request.endDate(), request.budget(), request.people(), request.interest());
     }
 
+   
+   
 }
