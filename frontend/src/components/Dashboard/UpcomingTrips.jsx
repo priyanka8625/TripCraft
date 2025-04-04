@@ -6,6 +6,9 @@ const UpcomingTrips = ({ trips = [] }) => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Upcoming Trips</h2>
+        <a href="#" className="text-emerald-600 hover:text-emerald-700 cursor-pointer">
+          View All
+        </a>
       </div>
       <div className="space-y-4">
         {trips.map((trip, index) => (
@@ -15,11 +18,11 @@ const UpcomingTrips = ({ trips = [] }) => {
           >
             <h3 className="font-semibold text-gray-800">{trip?.name || 'Untitled Trip'}</h3>
             <div className="mt-2 space-y-2">
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-gray-600 cursor-pointer">
                 <MapPin className="h-4 w-4 mr-2" />
                 <span>{trip?.destination || 'No destination'}</span>
               </div>
-              <div className="flex items-center text-gray-600">
+              <div className="flex items-center text-gray-600 cursor-pointer">
                 <Briefcase className="h-4 w-4 mr-2" />
                 <span>{trip?.dates || 'No dates set'}</span>
               </div>

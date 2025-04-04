@@ -20,12 +20,15 @@ const Activities = ({ activities = [] }) => {
     <div className="col-span-2">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-gray-800">Your Activities</h2>
+        <a href="#" className="text-emerald-600 hover:text-emerald-700 cursor-pointer">
+          View All
+        </a>
       </div>
       <div className="space-y-6">
         {activities.map((activity, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-sm overflow-hidden flex hover:shadow-md transition-shadow duration-200"
+            className="bg-white rounded-xl shadow-sm overflow-hidden flex hover:shadow-md transition-shadow duration-200 cursor-pointer"
           >
             <img 
               src={activity?.image || 'https://via.placeholder.com/192x128'} 
@@ -46,7 +49,7 @@ const Activities = ({ activities = [] }) => {
                   />
                   <span>{likedPosts.has(index) ? (activity?.likes || 0) + 1 : (activity?.likes || 0)}</span>
                 </button>
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-gray-600 cursor-pointer">
                   <MessageCircle className="h-4 w-4 mr-1" />
                   <span>{activity?.comments || 0}</span>
                 </div>

@@ -14,7 +14,7 @@ const RecentTrips = ({ trips = [] }) => {
         {trips.map((trip, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200"
+            className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
           >
             <img 
               src={trip?.image} 
@@ -24,15 +24,15 @@ const RecentTrips = ({ trips = [] }) => {
             <div className="p-4">
               <h3 className="font-semibold text-gray-800">{trip?.name || 'Untitled Trip'}</h3>
               <div className="mt-2 space-y-2">
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-gray-600 cursor-pointer">
                   <MapPin className="h-4 w-4 mr-2" />
                   <span>{trip?.destination || 'No destination'}</span>
                 </div>
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-gray-600 cursor-pointer">
                   <Users className="h-4 w-4 mr-2" />
                   <span>{trip?.people || 0} People</span>
                 </div>
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-gray-600 cursor-pointer">
                   <Wallet className="h-4 w-4 mr-2" />
                   <span>{trip?.budget || 'No budget set'}</span>
                 </div>
