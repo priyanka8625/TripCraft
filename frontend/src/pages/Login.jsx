@@ -33,6 +33,8 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("here");
+    
     if (validateForm()) {
       const loginData = {
         email: formData.email,
@@ -55,6 +57,8 @@ const Login = () => {
         console.error('Login error:', error);
         toast.error('Login failed. Please try again.');
       }
+    }else{
+      console.log("here2");
     }
   };
 
