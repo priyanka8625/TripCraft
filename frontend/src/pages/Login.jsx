@@ -56,7 +56,7 @@ const Login = () => {
 
     const handleGoogleSignup = async (response) => {
         try {
-            window.location.href = '/api/auth/google'; // Backend handles OAuth
+            window.location.href = `http://localhost:8080/oauth2/authorization/google`; // Backend handles OAuth
             toast.success("Google signin successful!");
         } catch (error) {
             toast.error("Google signup failed!");
@@ -72,7 +72,7 @@ const Login = () => {
         </div>
 
         <button
-          onClick={handleGoogleLogin}
+          onClick={handleGoogleSignup}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-150"
         >
           <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />

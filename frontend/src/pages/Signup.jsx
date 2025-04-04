@@ -59,10 +59,10 @@ const Signup = () => {
 
     const handleGoogleSignup = async (response) => {
       try {
-          window.location.href = '/api/auth/google'; // Backend handles OAuth
-          toast.success("Google signup successful!");
+        window.location.href = `http://localhost:8080/oauth2/authorization/google`; // Backend handles OAuth
+        toast.success("Google signin successful!");
       } catch (error) {
-          toast.error("Google signup failed!");
+          toast.error("Google signin failed!");
       }
   };
 
