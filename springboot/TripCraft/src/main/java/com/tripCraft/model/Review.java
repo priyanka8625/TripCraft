@@ -12,6 +12,42 @@ public class Review {
     private String userId;
     private String itineraryId;
     private double rating;
-    private String comment;
+    public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public String getUserId() {
+		return userId;
+	}
+	public void setUserId(String userId) {
+		this.userId = userId;
+	}
+	public String getItineraryId() {
+		return itineraryId;
+	}
+	public void setItineraryId(String itineraryId) {
+		this.itineraryId = itineraryId;
+	}
+	public double getRating() {
+		return rating;
+	}
+	public void setRating(double rating) {
+		this.rating = rating;
+	}
+	public String getComment() {
+		return comment;
+	}
+	public void setComment(String comment) {
+		this.comment = comment;
+	}
+	public LocalDateTime getCreatedAt() {
+		return createdAt;
+	}
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
+	}
+	private String comment;
     private LocalDateTime createdAt = LocalDateTime.now();
 }

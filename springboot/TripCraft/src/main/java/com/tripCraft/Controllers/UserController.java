@@ -1,37 +1,53 @@
 package com.tripCraft.Controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
 
 import com.tripCraft.Services.UserService;
-import com.tripCraft.model.LoginRequest;
-import com.tripCraft.model.Users;
+import com.tripCraft.model.User;
+import com.tripCraft.repository.UserRepo;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Optional;
 
 @RestController
+@RequestMapping("/api/profile")
 public class UserController {
 
-    @Autowired
-    private UserService service;
+    private final UserService userService;
+    private final UserRepo userRepo;
 
-
-    @PostMapping("/register")
-    public Users register(@RequestBody Users user) {
-        return service.register(user);
-
+    public UserController(UserService userService, UserRepo userRepo) {
+        this.userService = userService;
+        this.userRepo = userRepo;
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest user) {
-        return service.verify(user);
+    // ✅ 1. Get User Profile by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserProfile(@PathVariable String id) {
+        Optional<User> user = userRepo.findById(id);
+        return user.map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/dashboard")
-    public String dash() {
-    	return "Welcome";
+    // ✅ 2. Update User Profile
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUserProfile(@PathVariable String id, @RequestBody User updatedUser) {
+        return userRepo.findById(id).map(existingUser -> {
+            existingUser.setName(updatedUser.getName());
+            existingUser.setPhone(updatedUser.getPhone());
+            existingUser.setEmail(updatedUser.getEmail());
+            userRepo.save(existingUser);
+            return ResponseEntity.ok(existingUser);
+        }).orElseGet(() -> ResponseEntity.notFound().build());
     }
-   
+
+    // ✅ 3. Delete User Profile
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteUserProfile(@PathVariable String id) {
+        if (userRepo.existsById(id)) {
+            userRepo.deleteById(id);
+            return ResponseEntity.ok("User deleted successfully");
+        }
+        return ResponseEntity.notFound().build();
+    }
 }

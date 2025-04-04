@@ -21,34 +21,38 @@ public class GeminiService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public String getGeminiResponse(String prompt) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-goog-api-key", apiKey);
-        String requestBody = String.format("""
-        	    {
-        	      "contents": [{
-        	        "parts": [{
-        	          "text": "%s"
-        	        }]
-        	      }]
-        	    }
-        	    """, prompt.replace("\"", "\\\""));
+ public String getGeminiResponse(String prompt) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set("x-goog-api-key", apiKey);
 
+    String requestBody = String.format("""
+        {
+          "contents": [{
+            "parts": [{
+              "text": "%s"
+            }]
+          }]
+        }
+        """, prompt.replace("\"", "\\\""));
 
-        HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
-        
-        ResponseEntity<String> response = restTemplate.postForEntity(
-            apiUrl, entity, String.class
-        );
+    HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+    
+    try {
+        ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
+
+        System.out.println("Gemini API Response: " + response.getBody()); // Debugging
 
         if (response.getStatusCode().is2xxSuccessful()) {
             return extractJsonFromResponse(response.getBody());
         }
         throw new RuntimeException("API request failed: " + response.getStatusCode());
+    } catch (Exception e) {
+        e.printStackTrace();
+        throw new RuntimeException("Error calling Gemini API: " + e.getMessage());
     }
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
+}
+   private final ObjectMapper objectMapper = new ObjectMapper();
 
     private String extractJsonFromResponse(String response) {
         try {

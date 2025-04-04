@@ -1,7 +1,14 @@
 package com.tripCraft.Services;
 
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,8 +18,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.tripCraft.model.LoginRequest;
-import com.tripCraft.model.Users;
-import com.tripCraft.repo.UserRepo;
+import com.tripCraft.model.User;
+import com.tripCraft.repository.UserRepo;
 
 @Service
 public class UserService {
@@ -29,33 +36,62 @@ public class UserService {
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
-    public Users register(Users user) {
-        user.setPassword(encoder.encode(user.getPassword()));
-        repo.save(user);
-        return user;
+    public ResponseEntity<String> register(User user) {
+    if (repo.findByEmail(user.getEmail()).isPresent()) {
+        return ResponseEntity
+                .badRequest()
+                .body("{\"message\": \"Email already exists\"}");
     }
 
-    public ResponseEntity<String> verify(LoginRequest user) {
+    user.setPassword(encoder.encode(user.getPassword()));
+    user.setProvider("LOCAL");
+    repo.save(user);
+
+    return ResponseEntity
+            .ok("{\"message\": \"User registered successfully\"}");
+}
+
+
+
+    public ResponseEntity<Map<String, String>> verify(LoginRequest user) {
         try {
-            Authentication authentication = authManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
-            
+            Authentication authentication = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
+
             if (authentication.isAuthenticated()) {
                 // Generate the JWT token
-                String token = jwtService.generateToken(user.getUsername());
+                String token = jwtService.generateToken(user.getEmail());
 
-                // Return the token with HTTP status 200 OK
-                return ResponseEntity.status(HttpStatus.OK)
-                        .header("Authorization", "Bearer " + token)  // Optionally, you can return the token in the Authorization header
-                        .body(token);  // Return the token as the body of the response
+                // Create secure cookie
+                ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                        .httpOnly(true)
+                        .secure(true) // remove this in localhost if not using https
+                        .path("/")
+                        .maxAge(Duration.ofDays(1))
+                        .sameSite("Strict")
+                        .build();
+
+                // JSON response body
+                Map<String, String> responseBody = new HashMap<>();
+                responseBody.put("message", "Login successful");
+               
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                        .body(responseBody);
             } else {
-                // Authentication failed, return unauthorized status with error message
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("Authentication failed");
+                Map<String, String> responseBody = new HashMap<>();
+                responseBody.put("message", "Authentication failed");
+               
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseBody);
             }
         } catch (Exception e) {
-            // Handle any exceptions that might occur during authentication
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Internal server error: " + e.getMessage());
+            Map<String, String> responseBody = new HashMap<>();
+            responseBody.put("message", "Internal server error: " + e.getMessage());
+            responseBody.put("status", "error");
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseBody);
         }
     }
+
 }
