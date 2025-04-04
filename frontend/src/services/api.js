@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // Proxied to backend
+  baseURL: import.meta.env.VITE_API_BASE_URL+"/api", // Proxied to backend
   withCredentials: true, // Include HTTP-only cookies in requests
 });
 
