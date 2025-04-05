@@ -121,7 +121,7 @@ const Signup = () => {
                 {field === 'phone' && <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />}
                 {(field === 'password' || field === 'confirmPassword') && <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />}
                 <input
-                  type={field.includes('password') ? 'password' : 'text'}
+                  type={(field.includes('password') || field.includes('Password')) ? 'password' : 'text'}
                   name={field}
                   id={field}
                   value={formData[field]}
