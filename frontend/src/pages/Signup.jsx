@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Lock, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { register } from '../services/authService';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const Signup = () => {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   const validateForm = () => {
     let newErrors = {};
@@ -38,10 +40,25 @@ const Signup = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length === 0) {
+      try {
+        const { confirmPassword, ...signupData } = formData; // remove confirmPassword before sending
+        const response = await register(signupData);
+        if(response.status === 200){
+          toast.success('Account created successfully!');
+          console.log('Signup response:', response.data);
+          // Redirect to login page or home page
+          navigate('/login');
+        }else{
+          toast.error(response.message);
+        }
+      } catch (error) {
+        console.error('Signup failed:', error);
+        toast.error(error.response?.data?.message || 'Signup failed!');
+      }
       toast.success('Account created successfully!');
       console.log(JSON.stringify(formData));
     } else {
