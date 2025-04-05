@@ -11,8 +11,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired, redirect to login
-      window.location.href = '/login';
+      // Only redirect if not already on the login page
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
