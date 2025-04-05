@@ -38,7 +38,19 @@ public class TripController {
         Trip savedTrip = tripRepository.save(trip);
         return ResponseEntity.ok(savedTrip);
     }
+    @GetMapping("/user/{userId}/recent")
+    public ResponseEntity<List<Trip>> getRecentTrips(@PathVariable String userId) {
+        List<Trip> recentTrips = tripRepository.findByUserIdAndEndDateBefore(userId, java.time.LocalDate.now());
+        return ResponseEntity.ok(recentTrips);
+    }
+ // ✅ Get upcoming trips of a user
+    @GetMapping("/user/{userId}/upcoming")
+    public ResponseEntity<List<Trip>> getUpcomingTrips(@PathVariable String userId) {
+        List<Trip> upcomingTrips = tripRepository.findByUserIdAndStartDateAfter(userId, java.time.LocalDate.now());
+        return ResponseEntity.ok(upcomingTrips);
+    }
 
+    
     // ✅ Update an existing trip
     @PutMapping("/{id}")
     public ResponseEntity<Trip> updateTrip(@PathVariable String id, @RequestBody Trip updatedTrip) {

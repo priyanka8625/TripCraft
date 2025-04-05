@@ -67,7 +67,7 @@ public class UserService {
                         .httpOnly(true)
                         .secure(true) // remove this in localhost if not using https
                         .path("/")
-                        .maxAge(Duration.ofDays(1))
+                        .maxAge(Duration.ofDays(7))
                         .sameSite("Strict")
                         .build();
 

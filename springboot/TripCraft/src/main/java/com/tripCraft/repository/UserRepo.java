@@ -9,4 +9,5 @@ import com.tripCraft.model.User;
 @Repository
 public interface UserRepo extends MongoRepository<User, String> {
     Optional<User> findByEmail(String email);
+    boolean existsById(String userId);
 }
