@@ -54,9 +54,12 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
-                .successHandler(new OAuth2SuccessHandler(jwtService, userRepository)) // 🔥 New Success Handler
-                .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService()))
-            )
+            	    .successHandler(new OAuth2SuccessHandler(jwtService, userRepository))
+            	    .userInfoEndpoint(userInfo -> userInfo
+            	        .oidcUserService(oidcUserService())  // Google only
+            	    )
+            	)
+
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
             )

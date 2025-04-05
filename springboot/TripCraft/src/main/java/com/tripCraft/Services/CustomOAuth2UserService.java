@@ -9,12 +9,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-
 @Service
 public class CustomOAuth2UserService {
 
     @Autowired
     private UserRepo userRepository;
+
+    @Autowired
+    private JWTService jwtService;
 
     public OidcUser processOAuthPostLogin(String email, OidcUser oidcUser) {
         Optional<User> existingUser = userRepository.findByEmail(email);
@@ -29,6 +31,6 @@ public class CustomOAuth2UserService {
             userRepository.save(newUser);
         }
 
-        return oidcUser;
+        return oidcUser; // We don’t return a custom user here, token setting is handled in success handler
     }
 }
