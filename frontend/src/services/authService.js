@@ -13,6 +13,7 @@ export const login = async (email, password) => {
 };
 
 export const logout = async () => {
+    
     const response = await api.post('/auth/logout');
     return response; // "logout successful"
 };

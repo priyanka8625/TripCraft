@@ -50,8 +50,12 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource())) 
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
+<<<<<<< HEAD
                 .requestMatchers("/api/auth/login", "/api/auth/register","/api/auth/status").permitAll()
+=======
+>>>>>>> b0069ffb5403093211b0598af14d99e8b2da02b1
                 .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register","/api/auth/status").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
