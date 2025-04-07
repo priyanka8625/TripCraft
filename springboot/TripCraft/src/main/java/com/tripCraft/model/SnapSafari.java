@@ -11,6 +11,15 @@ public class SnapSafari {
     @Id
     private String id;
     private String userId;
+
+	private String destination;
+    private String title;
+    private String caption;
+    private List<String> images;
+    private int likes;
+    private List<Comment> comments;
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     public String getId() {
 		return id;
 	}
@@ -53,14 +62,6 @@ public class SnapSafari {
 	public void setCreatedAt(LocalDateTime createdAt) {
 		this.createdAt = createdAt;
 	}
-
-	private String destination;
-    private String title;
-    private String caption;
-    private List<String> images;
-    private int likes;
-    private List<Comment> comments;
-    private LocalDateTime createdAt = LocalDateTime.now();
 
     // Getters & Setters (only for changed/important ones shown below)
     public String getCaption() {

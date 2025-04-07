@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/snap-safari")
@@ -61,44 +63,78 @@ public class SnapSafariController {
         post.setCreatedAt(LocalDateTime.now());
         post.setComments(new ArrayList<>());
 
-        return ResponseEntity.ok(snapSafariRepository.save(post));
+//        return ResponseEntity.ok(snapSafariRepository.save(post));
+        return ResponseEntity.ok().body(snapSafariRepository.save(post));
     }
 
     // Get all posts
     @GetMapping
-    public List<SnapSafari> getAllPosts() {
-        return snapSafariRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+    public ResponseEntity<List<SnapSafari>> getAllPosts() {
+        List<SnapSafari> posts = snapSafariRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        if (posts.isEmpty()) {
+            return ResponseEntity.noContent().build(); // 204 No Content
+        } else {
+            return ResponseEntity.ok(posts); // 200 OK with list
+        }
     }
+
 
     // Get post by ID
     @GetMapping("/{postId}")
-    public SnapSafari getPostById(@PathVariable String postId) {
-        return snapSafariRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+    public ResponseEntity<?> getPostById(@PathVariable String postId) {
+        Optional<SnapSafari> optionalPost = snapSafariRepository.findById(postId);
+
+        if (optionalPost.isPresent()) {
+            return ResponseEntity.ok(optionalPost.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                 .body(Map.of("error", "Post not found"));
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<SnapSafari>> getPostsByUserId(@PathVariable String userId) {
+        List<SnapSafari> posts = snapSafariRepository.findByUserId(userId);
+        
+        if (posts.isEmpty()) {
+            return ResponseEntity.noContent().build(); // 204 No Content
+        } else {
+            return ResponseEntity.ok(posts); // 200 OK with JSON
+        }
     }
 
     // Like a post
     @PostMapping("/{postId}/like")
-    public SnapSafari likePost(@PathVariable String postId) {
-        SnapSafari post = snapSafariRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
-        post.setLikes(post.getLikes() + 1);
-        return snapSafariRepository.save(post);
+    public ResponseEntity<?> likePost(@PathVariable String postId) {
+        Optional<SnapSafari> post = snapSafariRepository.findById(postId);
+        if(post.isEmpty()) {
+        	return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","Post not found"));
+        }
+                
+        post.get().setLikes((post.get()).getLikes() + 1);
+        return ResponseEntity.ok(snapSafariRepository.save(post.get()));
     }
 
     // Comment on a post
     @PostMapping("/{postId}/comment")
-    public ResponseEntity<Comment> addComment(@PathVariable String postId,
-                                             
-                                              @RequestParam("comment") String commentText) {
-        SnapSafari post = snapSafariRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found"));
+    public ResponseEntity<?> addComment(@PathVariable String postId,
+                                        @RequestParam("comment") String commentText,
+                                        @RequestParam("username") String userId) {
+        Optional<SnapSafari> optionalPost = snapSafariRepository.findById(postId);
 
-        Comment comment = new Comment(post.getUserId(), commentText);
+        if (optionalPost.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Post not found"));
+        }
+
+        SnapSafari post = optionalPost.get();
+
+        Comment comment = new Comment(userId, commentText);
         post.getComments().add(comment);
         snapSafariRepository.save(post);
 
-        return ResponseEntity.ok(comment);
+        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
     }
 
     // Delete post
