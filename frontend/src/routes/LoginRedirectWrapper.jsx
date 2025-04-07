@@ -12,7 +12,7 @@ const LoginRedirectWrapper = () => {
   const { isAuthenticated, authChecked } = useAuth();
 
   if (!authChecked) return <div>Loading...</div>;
-
+  console.log('isAuthenticated', isAuthenticated);
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />;
 };
 
