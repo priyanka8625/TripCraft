@@ -60,6 +60,7 @@ public class AuthenticationController {
 	                    try {
 	                        String username = jwtService.extractUserName(token);
 	                        UserDetails user = userDetailsService.loadUserByUsername(username);
+
 	                        if (jwtService.validateToken(token, user)) {
 	                        	return ResponseEntity.ok().body(Map.of("authenticated", true));
 	                        }
@@ -68,9 +69,7 @@ public class AuthenticationController {
 	                    }
 	                }
 	            }
-	        }else {
-            	System.out.println("Np cookies");
-            }
+	        }
 
 	        return ResponseEntity.status(401).body("not authenticated");
 	    }
