@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Home, Map, Briefcase, MessageSquareMore, Camera, LogOut } from 'lucide-react';
 import Logo from './Logo';
 import SidebarItem from './SidebarItem';
+import { logout } from '../../../services/authService';
 
 const sidebarItems = [
   { icon: Home, label: 'Dashboard' },
@@ -14,6 +15,9 @@ const sidebarItems = [
 const Sidebar = () => {
   const [activeItem, setActiveItem] = useState('Dashboard');
 
+  const handleLogout = ()=>{
+    logout();
+  }
   return (
     <div className="w-72 bg-white shadow-lg rounded-r-2xl">
       <Logo />
@@ -28,7 +32,7 @@ const Sidebar = () => {
           />
         ))}
         <div className="mt-auto pt-8">
-          <SidebarItem icon={LogOut} label="Logout" />
+          <SidebarItem icon={LogOut} label="Logout" onClick={handleLogout} />
         </div>
       </nav>
     </div>
