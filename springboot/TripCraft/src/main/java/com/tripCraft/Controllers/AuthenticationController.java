@@ -20,6 +20,7 @@ import com.tripCraft.model.User;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -54,6 +55,7 @@ public class AuthenticationController {
 	        Cookie[] cookies = request.getCookies();
 
 	        if (cookies != null) {
+	        
 	            for (Cookie cookie : cookies) {
 	                if ("jwt".equals(cookie.getName())) {
 	                    String token = cookie.getValue();
@@ -73,4 +75,18 @@ public class AuthenticationController {
 
 	        return ResponseEntity.status(401).body("not authenticated");
 	    }
+	         @PostMapping("/logout")
+	        public ResponseEntity<?> logout(HttpServletResponse response) {
+	            // Create an expired cookie with the same name, path, and domain
+	            Cookie cookie = new Cookie("authToken", null);
+	            cookie.setHttpOnly(true);
+	            cookie.setSecure(true); // only if you're using HTTPS
+	            cookie.setPath("/");
+	            cookie.setMaxAge(0); // instantly expire the cookie
+	            response.addCookie(cookie);
+
+	            return ResponseEntity.ok("Logged out successfully.");
+	        }
+	    
+
 }
