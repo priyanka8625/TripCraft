@@ -75,19 +75,18 @@ public class AuthenticationController {
 
 	        return ResponseEntity.status(401).body("not authenticated");
 	    }
-	         @PostMapping("/logout")
-	        
-	         public ResponseEntity<?> logout(HttpServletResponse response) {
-	             Cookie cookie = new Cookie("jwt", null); // ✅ Correct cookie name
-	             cookie.setHttpOnly(true);
-	             cookie.setSecure(false); // ✅ Match what you used when setting it
-	             cookie.setPath("/");
-	             cookie.setMaxAge(0); // Expires immediately
-	             response.addCookie(cookie);
+	        @PostMapping("/logout")
+	        public ResponseEntity<?> logout(HttpServletResponse response) {
+	            // Create an expired cookie with the same name, path, and domain
+	            Cookie cookie = new Cookie("jwt", null);
+	            cookie.setHttpOnly(true);
+	            cookie.setPath("/");
+	            cookie.setSecure(false);
+	            cookie.setMaxAge(0); // instantly expire the cookie
+	            response.addCookie(cookie);
 
-	             return ResponseEntity.ok("Logged out successfully.");
-	         }
-
+	            return ResponseEntity.ok().body(Map.of("message", "Logged out successfully."));
+	        }
 	    
 
 }
