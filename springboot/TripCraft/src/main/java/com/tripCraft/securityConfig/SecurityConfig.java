@@ -1,5 +1,6 @@
 package com.tripCraft.securityConfig;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import com.tripCraft.Services.CustomOAuth2UserService;
 import com.tripCraft.Services.JWTService;
@@ -36,38 +38,49 @@ public class SecurityConfig {
     private JwtFilter jwtFilter;
     @Autowired
     private JWTService jwtService;
-
     @Autowired
     private UserDetailsService userDetailsService;
     @Autowired
     private UserRepo userRepository;
-    
     @Autowired
     private CustomOAuth2UserService customOAuth2UserService;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) 
+        http
+            .cors(Customizer.withDefaults()) // Enable CORS with default settings, overridden by corsConfigurationSource
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/auth/register","/api/auth/status", "/api/auth/logout").permitAll()
-
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/status", "/api/auth/logout").permitAll()
                 .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
-            	    .successHandler(new OAuth2SuccessHandler(jwtService, userRepository))
-            	    .userInfoEndpoint(userInfo -> userInfo
-            	        .oidcUserService(oidcUserService())  // Google only
-            	    )
-            	)
-
+                .successHandler(new OAuth2SuccessHandler(jwtService, userRepository))
+                .userInfoEndpoint(userInfo -> userInfo
+                    .oidcUserService(oidcUserService())
+                )
+            )
             .exceptionHandling(exception -> exception
                 .authenticationEntryPoint(new CustomAuthenticationEntryPoint())
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-            .build();
+            .addFilterBefore(corsFilter(), CorsFilter.class); // Ensure CORS filter is applied before others
+        return http.build();
+    }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173")); // Specific origin
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // Allow cookies
+        config.setMaxAge(3600L); // Cache pre-flight for 1 hour
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
     }
 
     @Bean
@@ -75,45 +88,25 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setPasswordEncoder(new BCryptPasswordEncoder(12));
         provider.setUserDetailsService(userDetailsService);
-
-
         return provider;
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
-
     }
+
     @Bean
     public OidcUserService oidcUserService() {
         OidcUserService delegate = new OidcUserService();
-        
         return new OidcUserService() {
             @Override
             public OidcUser loadUser(org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest userRequest) {
                 OidcUser oidcUser = delegate.loadUser(userRequest);
-
-                // Extract user details
                 Map<String, Object> attributes = oidcUser.getAttributes();
                 String email = (String) attributes.get("email");
-
-                // Store user in MongoDB if not exists
                 return customOAuth2UserService.processOAuthPostLogin(email, oidcUser);
             }
         };
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
-        config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(java.util.List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return (CorsConfigurationSource) source;
     }
 }

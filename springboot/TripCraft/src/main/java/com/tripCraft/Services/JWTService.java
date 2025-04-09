@@ -7,31 +7,20 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import javax.crypto.SecretKey;
+
 @Service
 public class JWTService {
 
+    // Fixed secret key (Base64-encoded, 256-bit minimum for HMAC-SHA256)
+    private static final String SECRET_KEY = "dGhpcy1pcy1hLXNlY3VyZS1rZXktZm9yLWp3dC1hdXRoZW50aWNhdGlvbg==";
 
-    private String secretkey = "";
-
-    public JWTService() {
-
-        try {
-            KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
-            SecretKey sk = keyGen.generateKey();
-            secretkey = Base64.getEncoder().encodeToString(sk.getEncoded());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    // Constructor removed since no dynamic key generation is needed
 
     public String generateToken(String email) {
         Map<String, Object> claims = new HashMap<>();
@@ -46,14 +35,12 @@ public class JWTService {
                 .compact();
     }
 
-
     private SecretKey getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretkey);
+        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String extractUserName(String token) {
-        // extract the username from jwt token
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -82,5 +69,4 @@ public class JWTService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
-
 }

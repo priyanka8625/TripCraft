@@ -7,6 +7,8 @@ import com.tripCraft.repository.UserRepo;
 import com.tripCraft.util.CurrentUserUtil;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -49,14 +51,13 @@ public class TripController {
     }
     @GetMapping("/recent")
     public ResponseEntity<List<Trip>> getRecentTrips() {
-        String userEmail = currentUserUtil.getCurrentUserEmail();
-        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("User not found"));
-        List<Trip> trips = tripRepository.findByUserIdAndEndDateBefore(user.getId(), LocalDate.now());
-        return ResponseEntity.ok(trips);
+    	String userId = getCurrentUserId();
+        List<Trip> recentTrips = tripRepository.findByUserIdAndEndDateBefore(userId, LocalDate.now());
+        return ResponseEntity.ok(recentTrips);
     }
  // ✅ Get upcoming trips of a user
     @GetMapping("/upcoming")
-    public ResponseEntity<List<Trip>> getUpcomingTrips(@PathVariable String userId) {
+    public ResponseEntity<List<Trip>> getUpcomingTrips() {
     	String userEmail = currentUserUtil.getCurrentUserEmail();
         User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("User not found"));
         List<Trip> upcomingTrips = tripRepository.findByUserIdAndStartDateAfter(user.getId(), java.time.LocalDate.now());
@@ -83,5 +84,12 @@ public class TripController {
         }
         tripRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+    private String getCurrentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername(); // Email or userId
+        }
+        return principal.toString();
     }
 }

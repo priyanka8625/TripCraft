@@ -64,16 +64,18 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        
-	<!--        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-	-->       
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-mongodb</artifactId>
+ <!-- https://mvnrepository.com/artifact/org.springframework.ai/spring-ai-core -->
+	<!-- Spring AI Core -->
+ <dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-core</artifactId>
+    <version>0.8.0</version> <!-- Use the latest version -->
 </dependency>
+
+	<dependency>
+    	 <groupId>org.springframework.boot</groupId>
+   		 <artifactId>spring-boot-starter-data-mongodb</artifactId>
+	</dependency>
 
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -114,5 +116,12 @@
 			</plugin>
 		</plugins>
 	</build>
+<repositories>
+    <repository>
+        <id>spring-milestones</id>
+        <name>Spring Milestones</name>
+        <url>https://repo.spring.io/milestone</url>
+    </repository>
+</repositories>
 
 </project>

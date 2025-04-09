@@ -1,40 +1,56 @@
 package com.tripCraft.Controllers;
 
-import java.io.IOException;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.tripCraft.Services.GeminiService;
 
 @RestController
-@RequestMapping("/api/itinerary")
+@RequestMapping("/api")
 public class GeminiController {
 
     @Autowired
     private GeminiService geminiService;
 
-    @PostMapping("/generate")
-public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
-    try {
-        String prompt = buildPrompt(request);
-        String jsonResponse = geminiService.getGeminiResponse(prompt);
+    // Existing endpoint for itinerary generation
+    @PostMapping("/itinerary/generate")
+    public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
+        try {
+            String prompt = buildPrompt(request);
+            String jsonResponse = geminiService.getGeminiResponse(prompt);
 
-        System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
+            System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
 
-        return ResponseEntity.ok().body(jsonResponse);
-    } catch (Exception e) {
-        e.printStackTrace();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("{\"error\": \"" + e.getMessage() + "\"}");
+            return ResponseEntity.ok().body(jsonResponse);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
     }
-}
 
+    // New endpoint for general chatbot interaction
+    @PostMapping("/chatbot/chat")
+    public ResponseEntity<?> chat(@RequestBody String userPrompt) {
+        try {
+            // Directly pass the user's prompt to GeminiService
+            String response = geminiService.getGeminiResponse(userPrompt);
+
+            System.out.println("Chatbot Response: " + response); // Debugging log
+
+            return ResponseEntity.ok().body(Map.of("message",response));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
+    }
+
+    // Existing method for building itinerary prompt
     private String buildPrompt(ItineraryRequest request) {
         return String.format("""
             Generate a travel itinerary in JSON format with these requirements:
@@ -64,7 +80,5 @@ public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request
             request.destination(), request.days(), request.startDate(), 
             request.endDate(), request.budget(), request.people(), request.interest());
     }
-
-   
-   
 }
+
