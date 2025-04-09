@@ -1,10 +1,15 @@
 package com.tripCraft.Controllers;
 
 import com.tripCraft.model.Trip;
+import com.tripCraft.model.User;
 import com.tripCraft.repository.TripRepository;
+import com.tripCraft.repository.UserRepo;
+import com.tripCraft.util.CurrentUserUtil;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,9 +18,13 @@ import java.util.Optional;
 public class TripController {
 
     private final TripRepository tripRepository;
+    private final UserRepo userRepository;
+    private final CurrentUserUtil currentUserUtil;
 
-    public TripController(TripRepository tripRepository) {
+    public TripController(TripRepository tripRepository, UserRepo userRepository, CurrentUserUtil currentUserUtil) {
         this.tripRepository = tripRepository;
+        this.userRepository = userRepository;
+        this.currentUserUtil = currentUserUtil;
     }
 
     // ✅ Get all trips
@@ -38,15 +47,19 @@ public class TripController {
         Trip savedTrip = tripRepository.save(trip);
         return ResponseEntity.ok(savedTrip);
     }
-    @GetMapping("/user/{userId}/recent")
-    public ResponseEntity<List<Trip>> getRecentTrips(@PathVariable String userId) {
-        List<Trip> recentTrips = tripRepository.findByUserIdAndEndDateBefore(userId, java.time.LocalDate.now());
-        return ResponseEntity.ok(recentTrips);
+    @GetMapping("/recent")
+    public ResponseEntity<List<Trip>> getRecentTrips() {
+        String userEmail = currentUserUtil.getCurrentUserEmail();
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("User not found"));
+        List<Trip> trips = tripRepository.findByUserIdAndEndDateBefore(user.getId(), LocalDate.now());
+        return ResponseEntity.ok(trips);
     }
  // ✅ Get upcoming trips of a user
-    @GetMapping("/user/{userId}/upcoming")
+    @GetMapping("/upcoming")
     public ResponseEntity<List<Trip>> getUpcomingTrips(@PathVariable String userId) {
-        List<Trip> upcomingTrips = tripRepository.findByUserIdAndStartDateAfter(userId, java.time.LocalDate.now());
+    	String userEmail = currentUserUtil.getCurrentUserEmail();
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new RuntimeException("User not found"));
+        List<Trip> upcomingTrips = tripRepository.findByUserIdAndStartDateAfter(user.getId(), java.time.LocalDate.now());
         return ResponseEntity.ok(upcomingTrips);
     }
 
