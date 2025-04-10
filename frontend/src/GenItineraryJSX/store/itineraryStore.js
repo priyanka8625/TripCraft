@@ -7,6 +7,8 @@ export const useItineraryStore = create((set) => ({
   destination: '',
   startDate: '',
   endDate: '',
+  budget: 0,
+  suggestedPeople: 1,
   addDay: (date) =>
     set((state) => ({
       days: [
@@ -55,9 +57,9 @@ export const useItineraryStore = create((set) => ({
           : day
       ),
     })),
-  addCollaborator: (safariId) =>
+  addCollaborator: (email) =>
     set((state) => ({
-      collaborators: [...state.collaborators, safariId],
+      collaborators: [...state.collaborators, email],
     })),
   setTitle: (title) =>
     set(() => ({
@@ -71,5 +73,13 @@ export const useItineraryStore = create((set) => ({
     set(() => ({
       startDate,
       endDate
+    })),
+  setBudget: (budget) =>
+    set(() => ({
+      budget
+    })),
+  setSuggestedPeople: (suggestedPeople) =>
+    set(() => ({
+      suggestedPeople
     })),
 }));
