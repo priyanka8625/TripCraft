@@ -1,6 +1,4 @@
 import React from 'react';
-import Sidebar from '../../components/Dashboard/Sidebar/Sidebar';
-import Navbar from '../../components/Dashboard/Navbar/Navbar';
 import MainContent from '../../components/Dashboard/MainContent';
 
 function Dashboard() {
@@ -84,18 +82,12 @@ function Dashboard() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
-    <Sidebar />
-    <div className="flex-1 overflow-auto">
-      <Navbar user={user} />
-        <MainContent 
-        user={user}
-        recentTrips={recentTrips}
-        activities={activities}
-        upcomingTrips={upcomingTrips}
-      />
-    </div>
-  </div>
+    <MainContent 
+      user={user}
+      recentTrips={recentTrips}
+      activities={activities}
+      upcomingTrips={upcomingTrips}
+    />
   );
 }
 
