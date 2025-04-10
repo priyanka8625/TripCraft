@@ -7,7 +7,7 @@ import { logout } from '../../../services/authService';
 
 const sidebarItems = [
   { icon: Home, label: 'Dashboard', path: '/dashboard' },
-  { icon: Map, label: 'Plan Itinerary', path: '/dashboard/plan-itinerary' },
+  { icon: Map, label: 'Plan Itinerary', path: '/dashboard/create-trip' },
   { icon: Briefcase, label: 'Your Trips', path: '/dashboard/your-trips' },
   { icon: MessageSquareMore, label: 'AI Assistant', path: '/dashboard/ai-assistant' },
   { icon: Camera, label: 'Snap Safari', path: '/dashboard/snap-safari' },
