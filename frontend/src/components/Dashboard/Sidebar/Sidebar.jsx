@@ -5,12 +5,13 @@ import SidebarItem from './SidebarItem';
 import { logout } from '../../../services/authService';
 
 const sidebarItems = [
-  { icon: Home, label: 'Dashboard' },
-  { icon: Map, label: 'Plan Itinerary' },
-  { icon: Briefcase, label: 'Your Trips' },
-  { icon: MessageSquareMore, label: 'AI Assistant' },
-  { icon: Camera, label: 'Snap Safari' },
+  { icon: Home, label: 'Dashboard', to: '/dashboard/dashboard' },
+  { icon: Map, label: 'Plan Itinerary', to: '/dashboard/plan-itinerary' },
+  { icon: Briefcase, label: 'Your Trips', to: '/dashboard/trips' },
+  { icon: MessageSquareMore, label: 'AI Assistant', to: '/dashboard/assistant' },
+  { icon: Camera, label: 'Snap Safari', to: '/dashboard/safari' },
 ];
+
 
 const Sidebar = () => {
   const [activeItem, setActiveItem] = useState('Dashboard');
@@ -27,9 +28,10 @@ const Sidebar = () => {
             key={item.label}
             icon={item.icon}
             label={item.label}
+            to={item.to}
             isActive={activeItem === item.label}
             onClick={() => setActiveItem(item.label)}
-          />
+          />        
         ))}
         <div className="mt-auto pt-8">
           <SidebarItem icon={LogOut} label="Logout" onClick={handleLogout} />
