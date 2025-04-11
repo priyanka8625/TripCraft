@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.tripCraft.Services.GeminiService;
+import com.tripCraft.model.ItineraryRequest;
 
 @RestController
 @RequestMapping("/api")

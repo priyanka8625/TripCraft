@@ -1,4 +1,4 @@
-package com.tripCraft.Controllers;
+package com.tripCraft.model;
 
 public record ItineraryRequest(
 	    String destination,

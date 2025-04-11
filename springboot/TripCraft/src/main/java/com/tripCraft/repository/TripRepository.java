@@ -11,5 +11,5 @@ public interface TripRepository extends MongoRepository<Trip, String>{
 
 	List<Trip> findByUserIdAndEndDateBefore(String userId, LocalDate date);
 	List<Trip> findByUserIdAndStartDateAfter(String userId, LocalDate date);
-
+	boolean existsByDestination(String destination);
 }
