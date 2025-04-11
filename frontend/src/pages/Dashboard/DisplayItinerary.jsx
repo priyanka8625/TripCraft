@@ -1,8 +1,8 @@
-import Sidebar from "../components/Dashboard/Sidebar/Sidebar";
-import Navbar from "../components/Dashboard/Navbar/Navbar";
+import Sidebar from "../../components/Dashboard/Sidebar/Sidebar";
+import Navbar from "../../components/Dashboard/Navbar/Navbar";
 import React, { useState, useEffect, useRef } from "react";
 
-export default function City2() {
+export default function DisplayItinerary() {
   const [expandedDay, setExpandedDay] = useState(null); // Track which day is expanded
   const user = {
     name: "John Snow",
@@ -281,16 +281,7 @@ export default function City2() {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar: Non-scrollable, fixed */}
-      <div className="flex h-screen bg-gray-50 sticky top-0 w-72">
-        <Sidebar />
-      </div>
-      <div className="flex-1 flex flex-col">
-        {/* Navbar: Non-scrollable, fixed */}
-        <div className="w-full h-17 bg-gray-50 flex-shrink-0 sticky top-0 z-10">
-          <Navbar user={user} />
-        </div>
+    <>
         <div className="flex flex-wrap gap-4 m-5 justify-left -mb-5">
           {trip.days.map((day, index) => (
             <button
@@ -440,7 +431,6 @@ export default function City2() {
             </div>
           </div>
         </main>
-      </div>
-    </div>
+    </>
   );
 }

@@ -5,7 +5,7 @@ import { useDebounce } from 'use-debounce';
 import { Search, Calendar, Users, ChevronRight, ChevronLeft, MapPin, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css'; // Import default styles (we'll override them)
-import Footer from '../components/Footer';
+import Footer from '../../components/Footer';
 const cities = [
   "Mumbai, India", "Delhi, India", "Bangalore, India", "Hyderabad, India",
   "Chennai, India", "Kolkata, India", "Pune, India", "Jaipur, India",
@@ -580,4 +580,4 @@ const PlanItineraryWithProvider = () => (
   </QueryClientProvider>
 );
 
-export default PlanItineraryWithProvider;
+export default PlanItinerary;
