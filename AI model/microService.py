@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from flask import Flask, request, jsonify
 from bson.objectid import ObjectId
 from difflib import SequenceMatcher
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -38,6 +39,26 @@ trip_keywords = {
     "spiritual": ["temple", "church", "mosque", "synagogue", "pilgrimage", "meditation", "shrine", "monastery", "holy site"]
 }
 
+def format_date(date_input):
+    """
+    Convert date input (string or datetime) to 'yyyy-MM-dd' (e.g., '2025-06-02').
+    Returns None if conversion fails.
+    """
+    try:
+        if isinstance(date_input, datetime):
+            # Already a datetime object, format directly
+            return date_input.strftime("%Y-%m-%d")
+        elif isinstance(date_input, str):
+            # Parse string like 'Mon, 02 Jun 2025 18:30:00 GMT'
+            parsed_date = datetime.strptime(date_input, "%a, %d %b %Y %H:%M:%S %Z")
+            return parsed_date.strftime("%Y-%m-%d")
+        else:
+            print(f"Invalid date type: {type(date_input)}")
+            return None
+    except ValueError as e:
+        print(f"Failed to parse date '{date_input}': {e}")
+        return None
+
 def get_itineraries_from_db(destination):
     """
     Fetches all itineraries for trips with the specified destination from the database.
@@ -63,14 +84,22 @@ def get_itineraries_from_db(destination):
     existing_itineraries_data = []
     for idx, itinerary in enumerate(itineraries, 1):
         activities = itinerary.get("activities", [])
-        print(f"Itinerary {idx} activities: {activities}")
-        # Fetch destination from corresponding trip for clarity
+        # Format date fields in activities
+        formatted_activities = []
+        for activity in activities:
+            formatted_activity = activity.copy()  # Avoid modifying original
+            if "date" in formatted_activity and formatted_activity["date"]:
+                formatted_activity["date"] = format_date(formatted_activity["date"])
+            formatted_activities.append(formatted_activity)
+        
+        print(f"Itinerary {idx} activities: {formatted_activities}")
+        # Fetch destination from corresponding trip
         trip = next((t for t in trips if str(t["_id"]) == itinerary["tripId"]), {})
         formatted_itinerary = {
             "id": idx,
             "trip_id": itinerary["tripId"],
             "destination": trip.get("destination", destination),
-            "activities": activities
+            "activities": formatted_activities
         }
         existing_itineraries_data.append(formatted_itinerary)
 
@@ -90,7 +119,6 @@ def calculate_itinerary_similarity(itinerary1, itinerary2):
     total_score = 0.0
     match_count = 0
 
-    # Compare each activity in itinerary1 with each in itinerary2
     for act1 in activities1:
         name1 = act1.get("name", "").lower()
         for act2 in activities2:
@@ -100,7 +128,6 @@ def calculate_itinerary_similarity(itinerary1, itinerary2):
                 total_score += score
                 match_count += 1
 
-    # Return average score or 0 if no valid comparisons
     return total_score / match_count if match_count > 0 else 0.0
 
 @app.route('/similarity', methods=['POST'])
@@ -111,27 +138,24 @@ def get_similar_activities():
     """
     data = request.get_json()
     destination = data.get('destination')
-    preferences = data.get('preferences')  # Expecting a list of preferences
+    preferences = data.get('preferences')
 
     if not destination or not preferences:
         return jsonify({"error": "Missing destination or preferences"}), 400
 
-    # Ensure preferences is a list, convert single string to list if needed
     if isinstance(preferences, str):
         preferences = [preferences]
-    preferences = [p.lower() for p in preferences]  # Convert all to lowercase
+    preferences = [p.lower() for p in preferences]
     invalid_prefs = [p for p in preferences if p not in trip_keywords]
     if invalid_prefs:
         return jsonify({"error": f"Invalid preferences: {invalid_prefs}. Must be one of: {list(trip_keywords.keys())}"}), 400
 
-    # Fetch itineraries for the destination
     existing_itineraries_data = get_itineraries_from_db(destination)
     if not existing_itineraries_data:
         return jsonify({"error": f"No itineraries found for destination: {destination}"}), 404
 
     print(f"Preference list: {preferences}")
 
-    # Match activities based on preferences
     similar_activities = []
     for itinerary in existing_itineraries_data:
         print(f"Checking itinerary ID {itinerary['id']} with trip_id {itinerary['trip_id']}")
@@ -148,30 +172,31 @@ def get_similar_activities():
                         "activity": activity,
                         "matched_preference": pref
                     })
-                    break  # Move to next activity after a match
+                    break
 
-    # Find similar itineraries from other destinations
     similar_itineraries = []
     if existing_itineraries_data:
-        # Fetch all itineraries excluding those already matched
         matched_trip_ids = [it['trip_id'] for it in existing_itineraries_data]
         all_itineraries = list(db.itineraries.find({"tripId": {"$nin": matched_trip_ids}}))
         
         for itinerary in all_itineraries:
-            # Fetch destination for this itinerary
             trip = db.trips.find_one({"_id": ObjectId(itinerary["tripId"])})
             itinerary_data = {
                 "activities": itinerary.get("activities", []),
                 "trip_id": itinerary["tripId"],
                 "destination": trip.get("destination", "Unknown") if trip else "Unknown"
             }
+            # Format dates in activities
+            itinerary_data["activities"] = [
+                {**act, "date": format_date(act["date"]) if act.get("date") else None}
+                for act in itinerary_data["activities"]
+            ]
+            
             max_similarity = 0.0
-            # Compare with each matched itinerary
             for matched_it in existing_itineraries_data:
                 similarity = calculate_itinerary_similarity(itinerary_data, matched_it)
                 max_similarity = max(max_similarity, similarity)
             
-            # Include if similarity is above threshold (e.g., 0.3)
             if max_similarity > 0.3:
                 formatted_similar_itinerary = {
                     "trip_id": itinerary["tripId"],
@@ -181,14 +206,13 @@ def get_similar_activities():
                 }
                 similar_itineraries.append(formatted_similar_itinerary)
 
-        # Sort by similarity score (descending)
         similar_itineraries.sort(key=lambda x: x["similarity_score"], reverse=True)
 
     response = {
         "destination": destination,
         "preferences": preferences,
         "similar_activities": similar_activities,
-        "similar_itineraries": similar_itineraries[:5]  # Limit to top 5 similar itineraries
+        "similar_itineraries": similar_itineraries[:5]
     }
 
     if not similar_activities and not similar_itineraries:
