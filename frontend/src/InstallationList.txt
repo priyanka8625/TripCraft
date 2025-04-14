@@ -11,4 +11,8 @@ npm install vite @vitejs/plugin-react
 npm install @react-oauth/google
 npm install react-hot-toast
 npm install axios
+npm install @dnd-kit/sortable
+npm install @dnd-kit/core
+npm install uuid
+npm install zustand
 npm run dev
