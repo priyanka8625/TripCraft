@@ -5,8 +5,8 @@ import UpcomingTrips from './UpcomingTrips';
 
 const MainContent = ({ user = {}, recentTrips = [], activities = [], upcomingTrips = [] }) => {
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="p-8 ">
+      <div className="mb-8 ">
         <h1 className="text-2xl font-bold text-gray-800">
           Hello {user?.name || 'Traveler'}!
         </h1>

@@ -65,9 +65,9 @@ public class UserService {
                 // Create secure cookie
                 ResponseCookie cookie = ResponseCookie.from("jwt", token)
                         .httpOnly(true)
-                        .secure(true) // remove this in localhost if not using https
+                        .secure(false) // remove this in localhost if not using https
                         .path("/")
-                        .maxAge(Duration.ofDays(1))
+                        .maxAge(Duration.ofDays(7))
                         .sameSite("Strict")
                         .build();
 

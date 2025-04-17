@@ -5,7 +5,7 @@ import { useDebounce } from 'use-debounce';
 import { Search, Calendar, Users, ChevronRight, ChevronLeft, MapPin, X } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css'; // Import default styles (we'll override them)
-import Footer from '../components/Footer';
+import Footer from '../../components/Footer';
 const cities = [
   "Mumbai, India", "Delhi, India", "Bangalore, India", "Hyderabad, India",
   "Chennai, India", "Kolkata, India", "Pune, India", "Jaipur, India",
@@ -502,71 +502,7 @@ const PlanItinerary = () => {
             </div>
           </div>
         )}
-
-        {/* Additional Sections to Extend Height */}
-        {/* Section 1: Popular Destinations */}
-        <div className="py-16 px-4">
-          <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">Popular Destinations</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              { name: 'Goa, India', image: './bbg1.jpg', description: 'Relax on pristine beaches and enjoy vibrant nightlife.' },
-              { name: 'Jaipur, India', image: './bbg1.jpg', description: 'Explore the Pink City with its majestic forts and palaces.' },
-              { name: 'Kochi, India', image: './bbg1.jpg', description: 'Experience the blend of history and modernity by the backwaters.' },
-            ].map((destination, index) => (
-              <motion.div
-                key={index}
-                className="bg-white rounded-xl shadow-lg overflow-hidden"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.3 }}
-              >
-                <img src={destination.image} alt={destination.name} className="w-full h-48 object-cover" />
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-800">{destination.name}</h3>
-                  <p className="mt-2 text-gray-600">{destination.description}</p>
-                  <button className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                    Explore
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Section 2: Travel Tips */}
-        <div className="py-16 px-4 bg-gray-100">
-          <h2 className="text-4xl font-bold text-center text-gray-800 mb-12">Travel Tips for Your Next Adventure</h2>
-          <div className="max-w-4xl mx-auto space-y-8">
-            {[
-              { tip: 'Pack Light', description: 'Only bring essentials to make your travel hassle-free.' },
-              { tip: 'Plan Ahead', description: 'Book accommodations and activities in advance to avoid last-minute stress.' },
-              { tip: 'Stay Safe', description: 'Keep your belongings secure and be aware of your surroundings.' },
-              { tip: 'Try Local Cuisine', description: 'Immerse yourself in the culture by tasting authentic dishes.' },
-            ].map((tip, index) => (
-              <motion.div
-                key={index}
-                className="p-6 bg-white rounded-xl shadow-md"
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.2 }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-lg font-semibold text-gray-800">{tip.tip}</h3>
-                <p className="mt-2 text-gray-600">{tip.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Section 3: Call to Action */}
-        <div className="py-16 px-4 text-center">
-          <h2 className="text-4xl font-bold text-gray-800 mb-6">Ready to Plan Your Next Trip?</h2>
-          <p className="text-lg text-gray-600 mb-8">Let us help you create an unforgettable journey!</p>
-          <button className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
-            Get Started
-          </button>
-        </div>
       </div>
-      <Footer />
     </>
   );
 };
@@ -580,4 +516,4 @@ const PlanItineraryWithProvider = () => (
   </QueryClientProvider>
 );
 
-export default PlanItineraryWithProvider;
+export default PlanItinerary;
