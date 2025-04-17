@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 import json
 import joblib
-from Similarity_Algorithm import find_similar_activities, compute_similarity, close_db_connection, all_possible_tags
+from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags
 
 # Valid time slots
 valid_time_slots = ["morning", "afternoon", "evening", "daytime"]
@@ -103,139 +103,112 @@ def preprocess_activities(activities, budget_per_person_per_day):
 
 # Generate itinerary
 def generate_itinerary(user_input):
+    # Extract input
+    start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
+    end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
+    days = (end_date - start_date).days + 1  # Inclusive of start and end dates
+    people = user_input["people"]
+    budget = user_input["budget"]
+    destination = user_input["destination"]
+    # Handle missing or empty preferences
+    preferences = user_input.get("preferences", [])
+    
+    # Validate input
+    if days < 1:
+        raise ValueError("End date must be on or after start date")
+    if people < 1:
+        raise ValueError("Number of people must be at least 1")
+    if budget < 0:
+        raise ValueError("Budget cannot be negative")
+    
+    # Calculate budget per person per day
+    budget_per_person_per_day = budget / people / days
+    
+    # Load or train model
     try:
-        # Extract input
-        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
-        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
-        days = (end_date - start_date).days + 1  # Inclusive of start and end dates
-        people = user_input["people"]
-        budget = user_input["budget"]
-        destination = user_input["destination"]
-        preferences = user_input["preferences"]
-        
-        # Validate input
-        if days < 1:
-            raise ValueError("End date must be on or after start date")
-        if people < 1:
-            raise ValueError("Number of people must be at least 1")
-        if budget < 0:
-            raise ValueError("Budget cannot be negative")
-        
-        # Calculate budget per person per day
-        budget_per_person_per_day = budget / people / days
-        
-        # Load or train model
-        try:
-            model = joblib.load("activity_scoring_model.pkl")
-        except FileNotFoundError:
-            model, _ = train_model()
-        
-        # Fetch activities
-        activities = find_similar_activities(destination, preferences, budget, people, days)
-        if not activities:
-            raise ValueError("No activities found for the destination")
-        
-        # Score activities
-        X = preprocess_activities(activities, budget_per_person_per_day)
-        # Validate feature names
-        if X.columns.tolist() != FEATURE_ORDER:
-            raise ValueError(f"Feature mismatch: Expected {FEATURE_ORDER}, got {X.columns.tolist()}")
-        scores = model.predict(X)
-        for i, activity in enumerate(activities):
-            activity["score"] = scores[i]
-        
-        # Sort by score
-        activities.sort(key=lambda x: x["score"], reverse=True)
-        
-        # Initialize itinerary
-        itinerary = []
-        remaining_budget = budget
-        used_slots = {i: [] for i in range(1, days + 1)}
-        total_duration = {i: 0 for i in range(1, days + 1)}
-        
-        # Add arrival
-        city = destination.split(',')[0]
-        itinerary.append({
-            "date": start_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
-            "day": 1,
-            "estimatedCost": 0,
-            "location": destination,
-            "name": f"Arrival in {city}",
-            "timeSlot": "afternoon"
-        })
-        used_slots[1].append("afternoon")
-        
-        # Add activities for days 2 to N-1
-        activity_index = 0
-        for day in range(2, days):
-            while total_duration[day] < 6 and activity_index < len(activities):  # Target 6-8 hours
-                activity = activities[activity_index]["activity"]
-                cost = activity["estimatedCost"] * people
-                time_slot = activity["timeSlot"].lower()
-                duration = activities[activity_index]["duration"]
-                
-                if (cost <= remaining_budget and 
-                    time_slot not in used_slots[day] and 
-                    total_duration[day] + duration <= 8):
-                    itinerary.append({
-                        "date": (start_date + timedelta(days=day-1)).strftime("%a, %d %b %Y 18:30:00 GMT"),
-                        "day": day,
-                        "estimatedCost": cost,
-                        "location": activity["location"],
-                        "name": activity["name"],
-                        "timeSlot": time_slot
-                    })
-                    remaining_budget -= cost
-                    used_slots[day].append(time_slot)
-                    total_duration[day] += duration
-                
-                activity_index += 1
-        
-        # Add departure
-        itinerary.append({
-            "date": end_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
-            "day": days,
-            "estimatedCost": 0,
-            "location": destination,
-            "name": f"Departure from {city}",
-            "timeSlot": "morning"
-        })
-        
-        # Validate itinerary
-        total_cost = sum(activity["estimatedCost"] for activity in itinerary)
-        if total_cost > budget:
-            raise ValueError("Itinerary exceeds budget")
-        
-        return {"activities": itinerary}
+        model = joblib.load("activity_scoring_model.pkl")
+    except FileNotFoundError:
+        model, _ = train_model()
     
-    finally:
-        close_db_connection()
+    # Fetch activities
+    activities = find_similar_activities(destination, preferences, budget, people, days)
+    if not activities:
+        raise ValueError("No activities found for the destination")
+    
+    # Score activities
+    X = preprocess_activities(activities, budget_per_person_per_day)
+    # Validate feature names
+    if X.columns.tolist() != FEATURE_ORDER:
+        raise ValueError(f"Feature mismatch: Expected {FEATURE_ORDER}, got {X.columns.tolist()}")
+    scores = model.predict(X)
+    for i, activity in enumerate(activities):
+        activity["score"] = scores[i]
+    
+    # Sort by score
+    activities.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Initialize itinerary
+    itinerary = []
+    remaining_budget = budget
+    used_slots = {i: [] for i in range(1, days + 1)}
+    total_duration = {i: 0 for i in range(1, days + 1)}
+    
+    # Add arrival
+    city = destination.split(',')[0]
+    itinerary.append({
+        "date": start_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
+        "day": 1,
+        "estimatedCost": 0,
+        "location": destination,
+        "name": f"Arrival in {city}",
+        "timeSlot": "afternoon"
+    })
+    used_slots[1].append("afternoon")
+    
+    # Add activities for days 2 to N-1
+    activity_index = 0
+    for day in range(2, days):
+        while total_duration[day] < 6 and activity_index < len(activities):  # Target 6-8 hours
+            activity = activities[activity_index]["activity"]
+            cost = activity["estimatedCost"] * people
+            time_slot = activity["timeSlot"].lower()
+            duration = activities[activity_index]["duration"]
+            
+            if (cost <= remaining_budget and 
+                time_slot not in used_slots[day] and 
+                total_duration[day] + duration <= 8):
+                itinerary.append({
+                    "date": (start_date + timedelta(days=day-1)).strftime("%a, %d %b %Y 18:30:00 GMT"),
+                    "day": day,
+                    "estimatedCost": cost,
+                    "location": activity["location"],
+                    "name": activity["name"],
+                    "timeSlot": time_slot
+                })
+                remaining_budget -= cost
+                used_slots[day].append(time_slot)
+                total_duration[day] += duration
+            
+            activity_index += 1
+    
+    # Add departure
+    itinerary.append({
+        "date": end_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
+        "day": days,
+        "estimatedCost": 0,
+        "location": destination,
+        "name": f"Departure from {city}",
+        "timeSlot": "morning"
+    })
+    
+    # Validate itinerary
+    total_cost = sum(activity["estimatedCost"] for activity in itinerary)
+    if total_cost > budget:
+        raise ValueError("Itinerary exceeds budget")
+    
+    return {"activities": itinerary}
 
-# Main function
-def main():
-    # Example user input
-    user_input = {
-        "title": "Summer Vacation",
-        "destination": "Paris",
-        "startDate": "2025-06-01",
-        "endDate": "2025-06-07",
-        "budget": 20000,
-        "people": 3,
-        "preferences": ["adventure", "nature", "relaxation"],
-        "collaborators": [
-            {"name": "Priya", "email": "priya@example.com"},
-            {"name": "Rahul", "email": "rahul@example.com"}
-        ]
-    }
-    
-    # Generate itinerary
-    itinerary = generate_itinerary(user_input)
-    
-    # Save to JSON
-    with open("itinerary.json", "w") as f:
-        json.dump(itinerary, f, indent=2)
-    
-    return itinerary
+
 
 if __name__ == "__main__":
     main()
