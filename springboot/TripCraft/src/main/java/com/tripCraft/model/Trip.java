@@ -20,7 +20,7 @@ public class Trip {
     private boolean isAiGenerated;
     private String status; // Planned, Ongoing, Completed
     private List<Collaborator> collaborators;
-    private List<String> preference; // New preference array attribute
+    private List<String> preferences; // New preference array attribute
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // Getters and setters
@@ -84,34 +84,16 @@ public class Trip {
     public void setCollaborators(List<Collaborator> collaborators) {
         this.collaborators = collaborators;
     }
-    public List<String> getPreference() {
-        return preference;
+    public List<String> getPreferences() {
+        return preferences;
     }
-    public void setPreference(List<String> preference) {
-        this.preference = preference;
+    public void setPreference(List<String> preferences) {
+        this.preferences = preferences;
     }
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-}
-
-class Collaborator {
-    private String userId;
-    private String role; // Editor, Viewer
-
-    public String getUserId() {
-        return userId;
-    }
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-    public String getRole() {
-        return role;
-    }
-    public void setRole(String role) {
-        this.role = role;
     }
 }

@@ -1,7 +1,9 @@
 package com.tripCraft.Controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tripCraft.Services.EmailSenderService;
 import com.tripCraft.model.Activity;
+import com.tripCraft.model.Collaborator;
 import com.tripCraft.model.Itinerary;
 import com.tripCraft.model.ItineraryRequest;
 import com.tripCraft.model.Trip;
@@ -26,10 +28,14 @@ import org.springframework.web.client.RestTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/trips")
@@ -48,6 +54,8 @@ public class TripController {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private EmailSenderService emailSenderService;
     @Value("${python.microservice.url:http://localhost:5000/similarity}")
     private String pythonMicroserviceUrl;
     // ✅ Get all trips
@@ -84,8 +92,72 @@ public class TripController {
         return ResponseEntity.ok(upcomingTrips);
     }
 
+    @PostMapping("/create")
+    public ResponseEntity<?> createTrip(@RequestBody Trip trip) {
+
+    String userId = getCurrentUserId();
+
+    // Step 1: Populate non-input fields
+    trip.setUserId(userId);
+    trip.setAiGenerated(false);
+    if (trip.getCollaborators() == null) {
+        trip.setCollaborators(new ArrayList<>());
+    }
+    else {
+    	for (Collaborator collaborator : trip.getCollaborators()) {
+    	    String subject = "New Trip Added!";
+    	    String body ="Hi there!\r\n"
+    	    		+ "You've been added as a collaborator to an exciting new trip planned on TripCraft. The trip is headed to "+trip.getDestination()+" from "+trip.getStartDate()+" to "+trip.getEndDate() +" As a "+collaborator.getRole()+", you'll be able to view and contribute to the trip details. Log in to your TripCraft account to explore the plan and join the adventure!\r\n"
+    	    		+ "\r\n"
+    	    		+ "";
+    	    emailSenderService.sendEmail(collaborator.getEmail(), subject, body);
+    	}
+
+    }
+    trip.setCreatedAt(LocalDateTime.now());
+
     
-    // ✅ Update an existing trip
+    System.out.println("Before Save: " + trip);
+    Trip savedTrip = tripRepository.save(trip);
+    System.out.println("After Save: " + savedTrip);
+
+    // Step 3: Find all trips with the same destination
+    List<String> tripIdsWithSameDestination = tripRepository.findByDestination(trip.getDestination())
+            .stream()
+            .map(Trip::getId)
+            .collect(Collectors.toList());
+
+    // Step 4: Fetch itineraries and safely collect activities
+    List<Activity> activities = itineraryRepository.findByTripIdIn(tripIdsWithSameDestination)
+            .stream()
+            .filter(itinerary -> itinerary.getActivities() != null)
+            .flatMap(itinerary -> itinerary.getActivities().stream())
+            .collect(Collectors.toList());
+
+    // Step 5: Extract unique locations and estimated costs
+    List<Map<String, Object>> locationSuggestions = activities.stream()
+        .collect(Collectors.toMap(
+            Activity::getLocation,
+            activity -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("location", activity.getLocation());
+                map.put("estimatedCost", activity.getEstimatedCost());
+                return map;
+            },
+            (existing, replacement) -> existing // if duplicate location, keep the first
+        ))
+        .values()
+        .stream()
+        .collect(Collectors.toList());
+
+    // Step 6: Return response
+    Map<String, Object> response = new HashMap<>();
+    response.put("tripId", savedTrip.getId());
+    response.put("recommendations", locationSuggestions);
+
+    return ResponseEntity.ok(response);
+}
+  // ✅ Update an existing trip
     @PutMapping("/{id}")
     public ResponseEntity<Trip> updateTrip(@PathVariable String id, @RequestBody Trip updatedTrip) {
         if (!tripRepository.existsById(id)) {
@@ -122,6 +194,8 @@ public class TripController {
         public Itinerary getItinerary() { return itinerary; }
         public void setItinerary(Itinerary itinerary) { this.itinerary = itinerary; }
     }
+    
+    
     @PostMapping
     public ResponseEntity<?> createTripAndItinerary(@RequestBody Trip trip) {
         // Step 1: Set required fields
@@ -201,21 +275,21 @@ public class TripController {
 
     private Itinerary callPythonMicroservice(Trip trip) {
         // Prepare request body for Flask /similarity endpoint
-        Map<String, String> requestBody = new HashMap<>();
-        requestBody.put("destination", trip.getDestination());
-        
-        // Use the first preference if available, otherwise default to "Adventure"
-        String preferenceType = (trip.getPreference() != null && !trip.getPreference().isEmpty()) 
-            ? trip.getPreference().get(0) 
-            : "Adventure";
-        requestBody.put("preference_type", preferenceType);
+    	Map<String, Object> requestBody = new HashMap<>();
+    	requestBody.put("destination", trip.getDestination());
+
+    	// Send preferences as a list
+    	List<String> preferences = (trip.getPreferences() != null && !trip.getPreferences().isEmpty())
+    	    ? trip.getPreferences()
+    	    : List.of("adventure");
+    	requestBody.put("preferences", preferences);
 
         // Set headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         // Create HTTP entity
-        HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
             // Call Flask endpoint
@@ -231,6 +305,7 @@ public class TripController {
         } catch (Exception e) {
             throw new RuntimeException("Error calling Python microservice: " + e.getMessage(), e);
         }
+        
     }
     private Itinerary parsePythonResponse(String jsonResponse, String destination) throws Exception {
         // Parse JSON response from Flask
@@ -266,4 +341,6 @@ public class TripController {
         itinerary.setActivities(activities);
         return itinerary;
     }
+    
+   
     }
