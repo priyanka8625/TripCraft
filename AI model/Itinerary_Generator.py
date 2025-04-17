@@ -105,12 +105,21 @@ def preprocess_activities(activities, budget_per_person_per_day):
 def generate_itinerary(user_input):
     try:
         # Extract input
-        days = user_input["days"]
+        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
+        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
+        days = (end_date - start_date).days + 1  # Inclusive of start and end dates
         people = user_input["people"]
         budget = user_input["budget"]
         destination = user_input["destination"]
         preferences = user_input["preferences"]
-        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
+        
+        # Validate input
+        if days < 1:
+            raise ValueError("End date must be on or after start date")
+        if people < 1:
+            raise ValueError("Number of people must be at least 1")
+        if budget < 0:
+            raise ValueError("Budget cannot be negative")
         
         # Calculate budget per person per day
         budget_per_person_per_day = budget / people / days
@@ -184,7 +193,7 @@ def generate_itinerary(user_input):
         
         # Add departure
         itinerary.append({
-            "date": (start_date + timedelta(days=days-1)).strftime("%a, %d %b %Y 18:30:00 GMT"),
+            "date": end_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
             "day": days,
             "estimatedCost": 0,
             "location": destination,
@@ -203,6 +212,30 @@ def generate_itinerary(user_input):
         close_db_connection()
 
 # Main function
+def main():
+    # Example user input
+    user_input = {
+        "title": "Summer Vacation",
+        "destination": "Paris",
+        "startDate": "2025-06-01",
+        "endDate": "2025-06-07",
+        "budget": 20000,
+        "people": 3,
+        "preferences": ["adventure", "nature", "relaxation"],
+        "collaborators": [
+            {"name": "Priya", "email": "priya@example.com"},
+            {"name": "Rahul", "email": "rahul@example.com"}
+        ]
+    }
+    
+    # Generate itinerary
+    itinerary = generate_itinerary(user_input)
+    
+    # Save to JSON
+    with open("itinerary.json", "w") as f:
+        json.dump(itinerary, f, indent=2)
+    
+    return itinerary
 
 if __name__ == "__main__":
     main()
