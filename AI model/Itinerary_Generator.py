@@ -193,7 +193,7 @@ def generate_itinerary(user_input):
     
     # Add departure
     itinerary.append({
-        "date": end_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
+        "startDate": datetime.now().strftime("%Y-%m-%d"),
         "day": days,
         "estimatedCost": 0,
         "location": destination,
