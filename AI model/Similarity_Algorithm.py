@@ -11,7 +11,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise ValueError("MONGO_URI is missing from the environment variables")
 
-# Connect to MongoDB
+# Initialize MongoDB client (single instance)
 try:
     client = MongoClient(MONGO_URI)
     db = client.get_database("TripCraft")
@@ -72,25 +72,18 @@ def compute_similarity(user_prefs, spot_tags):
 
 def find_similar_activities(destination, preferences, budget, people, days):
     """
-    Finds spots matching the given preferences for a destination.
+    Finds spots matching the given preferences or highest-rated spots if no preferences.
     Args:
         destination (str): The destination (e.g., "Paris").
-        preferences (list or str): List of preferences (e.g., ["history", "art"]).
+        preferences (list or None): List of preferences (e.g., ["history", "art"]) or None/[].
         budget (float): Total budget.
         people (int): Number of people.
         days (int): Number of days.
     Returns:
-        list: List of spots with activity details, similarity score, rating, and duration.
+        list: List of spots with activity details, similarity score (or rating), rating, and duration.
     """
-    if not destination or not preferences:
-        raise ValueError("Destination and preferences are required")
-
-    if isinstance(preferences, str):
-        preferences = [preferences]
-    preferences = [p.lower() for p in preferences]
-    invalid_prefs = [p for p in preferences if p not in trip_keywords]
-    if invalid_prefs:
-        raise ValueError(f"Invalid preferences: {invalid_prefs}")
+    if not destination:
+        raise ValueError("Destination is required")
 
     # Fetch destination data
     dest_data = db.destination.find_one({"destination": {"$regex": destination, "$options": "i"}})
@@ -98,7 +91,6 @@ def find_similar_activities(destination, preferences, budget, people, days):
         return []
 
     spots = dest_data["spots"]
-    similar_spots = []
     all_spots = []
 
     for spot in spots:
@@ -115,15 +107,15 @@ def find_similar_activities(destination, preferences, budget, people, days):
         if cost > budget:
             continue
 
-        # Generate tags from category and name
+        # Generate tags from category and name (for similarity scoring)
         tags = category_to_tags.get(category.capitalize(), [])
         for pref, keywords in trip_keywords.items():
             if spot_name_lower and any(keyword in spot_name_lower for keyword in keywords):
                 tags.append(pref)
         tags = list(set(tags))
 
-        # Compute similarity
-        similarity_score = compute_similarity(preferences, tags)
+        # Compute similarity if preferences are provided
+        similarity_score = compute_similarity(preferences, tags) if preferences else 0
 
         # Format spot as activity
         activity_data = {
@@ -138,20 +130,31 @@ def find_similar_activities(destination, preferences, budget, people, days):
             "duration": duration
         }
 
-        if similarity_score > 0:
-            similar_spots.append(activity_data)
         all_spots.append(activity_data)
 
-    # Sort by similarity and rating
-    similar_spots.sort(key=lambda x: (x["similarity_score"], x["rating"]), reverse=True)
-    all_spots.sort(key=lambda x: x["rating"], reverse=True)
-
-    # Ensure enough activities (fill 6-8 hours/day)
-    required_activities = 8 * (days - 1) // 2  # Approx. 8 hours/day, 2-hour avg duration
-    if len(similar_spots) >= required_activities:
-        return similar_spots
+    # Sort based on preferences
+    if preferences:
+        # Validate preferences
+        preferences = [p.lower() for p in preferences if isinstance(p, str)]
+        invalid_prefs = [p for p in preferences if p not in trip_keywords]
+        if invalid_prefs:
+            raise ValueError(f"Invalid preferences: {invalid_prefs}")
+        
+        # Filter spots with non-zero similarity
+        similar_spots = [spot for spot in all_spots if spot["similarity_score"] > 0]
+        similar_spots.sort(key=lambda x: (x["similarity_score"], x["rating"]), reverse=True)
+        
+        # Ensure enough activities (fill 6-8 hours/day)
+        required_activities = 8 * (days - 1) // 2  # Approx. 8 hours/day, 2-hour avg duration
+        if len(similar_spots) >= required_activities:
+            return similar_spots
+        else:
+            # Supplement with high-rated spots
+            all_spots.sort(key=lambda x: x["rating"], reverse=True)
+            return similar_spots + [s for s in all_spots if s not in similar_spots][:required_activities - len(similar_spots)]
     else:
-        return similar_spots + all_spots[:required_activities - len(similar_spots)]
-
-def close_db_connection():
-    client.close()
+        # No preferences: sort by rating
+        all_spots.sort(key=lambda x: x["rating"], reverse=True)
+        # Return top spots (enough for 6-8 hours/day)
+        required_activities = 8 * (days - 1) // 2
+        return all_spots[:required_activities]
