@@ -156,7 +156,7 @@ def generate_itinerary(user_input):
     # Add arrival
     city = destination.split(',')[0]
     itinerary.append({
-        "date": start_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
+        "date": start_date.strftime("%Y-%m-%d"),
         "day": 1,
         "estimatedCost": 0,
         "location": destination,
@@ -178,7 +178,7 @@ def generate_itinerary(user_input):
                 time_slot not in used_slots[day] and 
                 total_duration[day] + duration <= 8):
                 itinerary.append({
-                    "date": (start_date + timedelta(days=day-1)).strftime("%a, %d %b %Y 18:30:00 GMT"),
+                    "date": (start_date + timedelta(days=day - 1)).strftime("%Y-%m-%d"),
                     "day": day,
                     "estimatedCost": cost,
                     "location": activity["location"],
@@ -193,7 +193,7 @@ def generate_itinerary(user_input):
     
     # Add departure
     itinerary.append({
-        "startDate": datetime.now().strftime("%Y-%m-%d"),
+        "date": end_date.strftime("%Y-%m-%d"),
         "day": days,
         "estimatedCost": 0,
         "location": destination,
