@@ -1,11 +1,13 @@
 package com.tripCraft.Controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tripCraft.Services.EmailSenderService;
 import com.tripCraft.model.Activity;
 import com.tripCraft.model.Collaborator;
+import com.tripCraft.model.Destination;
 import com.tripCraft.model.Itinerary;
 import com.tripCraft.model.ItineraryRequest;
 import com.tripCraft.model.Trip;
@@ -229,6 +231,7 @@ public class TripController {
             itinerary = callPythonMicroservice(trip);
         } else {
             itinerary = callGeminiService(trip);
+            
         }
 
         // Step 5: Save Trip first to get its ID
@@ -265,12 +268,40 @@ public class TripController {
         try {
             // Clean the response to remove markdown backticks
             String cleanedJson = cleanJsonResponse(jsonResponse);
+
+            // Extract and save spots into MongoDB
+            saveSpotsToMongo(cleanedJson, trip.getDestination());
+
+            // Convert entire JSON to Itinerary object
             return objectMapper.readValue(cleanedJson, Itinerary.class);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage(), e);
         }
     }
-    private String cleanJsonResponse(String response) {
+    private void saveSpotsToMongo(String cleanedJson, String destinationName) {
+        try {
+            JsonNode rootNode = objectMapper.readTree(cleanedJson);
+            JsonNode spotsNode = rootNode.get("spots");
+
+            if (spotsNode != null && spotsNode.isArray()) {
+                List<Destination.Spot> spots = new ArrayList<>();
+                for (JsonNode spotNode : spotsNode) {
+                    Destination.Spot spot = objectMapper.treeToValue(spotNode, Destination.Spot.class);
+                    spots.add(spot);
+                }
+
+                Destination destination = new Destination();
+                destination.setDestination(destinationName);
+                destination.setSpots(spots);
+                destinationRepository.save(destination);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to extract/save spots: " + e.getMessage());
+            // Don't stop the main flow even if spot saving fails
+        }
+    }
+
+ private String cleanJsonResponse(String response) {
         // Remove markdown code blocks and extra whitespace
         return response
             .replaceAll("```json\\s*", "") // Remove ```json and any following whitespace

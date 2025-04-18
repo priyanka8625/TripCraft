@@ -54,32 +54,50 @@ public class GeminiController {
     // Existing method for building itinerary prompt
     private String buildPrompt(ItineraryRequest request) {
         return String.format("""
-            Generate a travel itinerary in JSON format with these requirements:
-            - Destination: %s
-            - Duration: %d days (%s to %s)
-            - Budget: $%.2f
-            - People: %d
-            - Interest: %s
-            
-            Structure:
+            You are a smart travel planner. Based on the following travel plan:
             {
-              "activities": [
-                {
-                  "day": 1,
-                  "date": "2024-06-10",
-                  "name": "Visit Eiffel Tower",
-                  "location": "Paris, France",
-                  "image": "url",
-                  "timeSlot": "10:00 AM - 12:00 PM",
-                  "estimatedCost": 20.00
-                }
-              ]
+              "title": "Summer Vacation",
+              "destination": "%s",
+              "startDate": "%s",
+              "endDate": "%s",
+              "budget": %.2f,
+              "preferences": ["%s"],
+              "people": %d,
+              "collaborators": []
             }
-            
-            Ensure the JSON is valid, escape quotes properly, and maintain the exact structure.
-            """, 
-            request.destination(), request.days(), request.startDate(), 
-            request.endDate(), request.budget(), request.people(), request.interest());
+
+            Generate a JSON itinerary with two parts:
+            1. "activities" – a list of daily travel activities, each with:
+               - day (number),
+               - date (yyyy-mm-dd),
+               - name (of the activity),
+               - location,
+               - image (URL),
+               - timeSlot (e.g., Morning, Afternoon),
+               - estimatedCost (in INR)
+
+            2. "spots" –  Provide a rich list of **at least 25 unique tourist spots** near the destination. Include popular, offbeat, cultural, nature, and adventure spots.
+              - name,
+               - location,
+               - category (e.g., nature, cultural, shopping),
+               - rating (1 to 5),
+               - estimatedCost (approx. in INR),
+               - timeSlot
+
+            Make sure the response is in **pure JSON** format like:
+            {
+              "activities": [ ... ],
+              "spots": [ ... ]
+            }
+            """,
+            request.destination(),
+            request.startDate(),
+            request.endDate(),
+            request.budget(),
+            request.interest(),
+            request.people()
+        );
     }
 }
+
 
