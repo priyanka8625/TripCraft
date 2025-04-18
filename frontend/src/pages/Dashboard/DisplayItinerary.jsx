@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import ActivityCard from '../../components/Dashboard/ActivityCard';
 import MapComponent from '../../components/Dashboard/MapComponent';
 import LoadingScreen from '../../components/Dashboard/LoadingScreen';
-import { getTrip } from '../../services/tripService';
+import { getItineraryWithTripId } from '../../services/tripService';
 
 export default function DisplayItinerary() {
   const [activeDay, setActiveDay] = useState(0);
@@ -24,9 +24,9 @@ export default function DisplayItinerary() {
 
       try {
         setIsLoading(true);
-        const data = await getTrip(tripId);
-        const activities = data.itinerary.activities;
-
+        const data = await getItineraryWithTripId(tripId);
+        const activities = data[0].activities;
+        console.log(activities);
         // Group activities by day
         const grouped = activities.reduce((acc, activity) => {
           const dayIndex = activity.day - 1;

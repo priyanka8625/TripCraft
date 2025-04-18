@@ -13,7 +13,7 @@ function App() {
     destination: '',
     startDate: '',
     endDate: '',
-    noOfPeople: 0,
+    people: 0,
     budget: 0,
     preferences: [],
     collaborators: [],
@@ -101,8 +101,8 @@ function App() {
           newErrors.endDate = 'End date must be after start date';
         break;
       case 3:
-        if (formData.noOfPeople <= 0)
-          newErrors.noOfPeople = 'Number of people must be greater than 0';
+        if (formData.people <= 0)
+          newErrors.people = 'Number of people must be greater than 0';
         if (formData.budget <= 0)
           newErrors.budget = 'Budget must be greater than 0';
         break;
@@ -261,15 +261,15 @@ function App() {
                 </label>
                 <input
                   type="number"
-                  name="noOfPeople"
-                  value={formData.noOfPeople}
+                  name="people"
+                  value={formData.people}
                   onChange={handleInputChange}
                   min="1"
                   className="mt-1 block w-full rounded-xl border border-gray-300 px-4 py-3 transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none"
                   placeholder="Enter number of people"
                 />
-                {errors.noOfPeople && (
-                  <p className="text-red-500 text-sm mt-1">{errors.noOfPeople}</p>
+                {errors.people && (
+                  <p className="text-red-500 text-sm mt-1">{errors.people}</p>
                 )}
               </div>
               <div>
