@@ -72,18 +72,21 @@ public class GeminiController {
                - date (yyyy-mm-dd),
                - name (of the activity),
                - location,
-               - image (URL),
                - timeSlot (e.g., Morning, Afternoon),
                - estimatedCost (in INR)
-
+               - longitude
+               - latitude
+        	   - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
+               - rating (1 to 5),
             2. "spots" –  Provide a rich list of **at least 25 unique tourist spots** near the destination. Include popular, offbeat, cultural, nature, and adventure spots.
               - name,
-               - location,
-               - category (e.g., nature, cultural, shopping),
+              - location,
+               - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
                - rating (1 to 5),
                - estimatedCost (approx. in INR),
                - timeSlot
-
+        	   - longitude
+               - latitude
             Make sure the response is in **pure JSON** format like:
             {
               "activities": [ ... ],

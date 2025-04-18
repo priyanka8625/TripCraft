@@ -23,6 +23,16 @@ public class Trip {
     private List<String> preferences; // New preference array attribute
     private LocalDateTime createdAt = LocalDateTime.now();
     private int people;
+    private String thumbnail;
+
+    public String getThumbnail() {
+        return thumbnail;
+    }
+
+    public void setThumbnail(String thumbnail) {
+        this.thumbnail = thumbnail;
+    }
+
     public int getPeople() {
 		return people;
 	}

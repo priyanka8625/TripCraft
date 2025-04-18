@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tripCraft.Services.EmailSenderService;
+import com.tripCraft.Services.TripService;
 import com.tripCraft.model.Activity;
 import com.tripCraft.model.Collaborator;
 import com.tripCraft.model.Destination;
@@ -37,11 +38,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -52,11 +55,14 @@ public class TripController {
     private  TripRepository tripRepository;
 	@Autowired
     private  UserRepo userRepository;
-  
+   
 	@Autowired
 	private DestinationRepository destinationRepository;
     @Autowired
     private ItineraryRepository itineraryRepository;
+    
+    @Autowired
+    private TripService tripService;
     @Autowired
     private GeminiController geminiController;
     @Autowired
@@ -68,11 +74,29 @@ public class TripController {
     private EmailSenderService emailSenderService;
     @Value("${python.microservice.url:http://localhost:5000/similarity}")
     private String pythonMicroserviceUrl;
+    
+    List<String> imageUrls = Arrays.asList(
+    	    "https://asset.cloudinary.com/didg0xpge/3fb36016acff6b5759fbc5af70a461f5",
+    	    "https://asset.cloudinary.com/didg0xpge/3fb36016acff6b5759fbc5af70a461f5",
+    	    "https://asset.cloudinary.com/didg0xpge/3fb36016acff6b5759fbc5af70a461f5",
+    	    "https://asset.cloudinary.com/didg0xpge/1b4e0fac8fbef1eda483c895ec2ced7a",
+    	    "https://asset.cloudinary.com/didg0xpge/8b1876db93220edaf85e9992c71793a8",
+    	    "https://asset.cloudinary.com/didg0xpge/026d8f4f91f3e839e9d4877e51456217",
+    	    "https://asset.cloudinary.com/didg0xpge/23f267d0be91a17198a6ff06c29c9cb4",
+    	    "https://asset.cloudinary.com/didg0xpge/d09309971cc04990e49c5bfe3f496ced",
+    	    "https://asset.cloudinary.com/didg0xpge/d09309971cc04990e49c5bfe3f496ced",
+    	    "https://asset.cloudinary.com/didg0xpge/9fcdaa4a82d3dc556bc83e6a67d3a013",
+    	    "https://asset.cloudinary.com/didg0xpge/931d1157cad5074ab7e168bd80f503e1"
+    	);
+
     // ✅ Get all trips
     @GetMapping
-    public List<Trip> getAllTrips() {
-        return tripRepository.findAll();
+    public ResponseEntity<?> getUserTrips() {
+        String userId = getCurrentUserId(); // from token/session
+        List<Trip> trips = tripService.getTripsForLoggedInUser(userId);
+        return ResponseEntity.ok(trips);
     }
+
 
     // ✅ Get a single trip by ID
     @GetMapping("/{id}")
@@ -102,72 +126,58 @@ public class TripController {
         return ResponseEntity.ok(upcomingTrips);
     }
 
+   
     @PostMapping("/create")
     public ResponseEntity<?> createTrip(@RequestBody Trip trip) {
 
-    String userId = getCurrentUserId();
+        String userId = getCurrentUserId();
 
-    // Step 1: Populate non-input fields
-    trip.setUserId(userId);
-    trip.setAiGenerated(false);
-    if (trip.getCollaborators() == null) {
-        trip.setCollaborators(new ArrayList<>());
+        // Step 1: Populate non-input fields
+        trip.setUserId(userId);
+        trip.setAiGenerated(false);
+        if (trip.getCollaborators() == null) {
+            trip.setCollaborators(new ArrayList<>());
+        } else {
+            for (Collaborator collaborator : trip.getCollaborators()) {
+            	
+            	Optional<User> user = userRepository.findByEmail(collaborator.getEmail());
+                user.ifPresent(value -> collaborator.setUserId(value.getId()));
+
+                String subject = "New Trip Added!";
+                String body = "Hi there!\r\n"
+                        + "You've been added as a collaborator to an exciting new trip planned on TripCraft. "
+                        + "The trip is headed to " + trip.getDestination() + " from " + trip.getStartDate() + " to " + trip.getEndDate() + ". "
+                        + "As a "  + ", you'll be able to view and contribute to the trip details. "
+                        + "Log in to your TripCraft account to explore the plan and join the adventure!\r\n";
+                emailSenderService.sendEmail(collaborator.getEmail(), subject, body);
+            }
+        }
+
+        trip.setCreatedAt(LocalDateTime.now());
+        String randomThumbnail = imageUrls.get(new Random().nextInt(imageUrls.size()));
+        trip.setThumbnail(randomThumbnail);
+
+        System.out.println("Before Save: " + trip);
+        Trip savedTrip = tripRepository.save(trip);
+        System.out.println("After Save: " + savedTrip);
+
+        // ✅ Fetch the destination and get the list of spots
+        Optional<Destination> destinationOpt = destinationRepository.findByDestinationIgnoreCase(trip.getDestination());
+
+        List<Destination.Spot> spots = new ArrayList<>();
+        if (destinationOpt.isPresent()) {
+            spots = destinationOpt.get().getSpots(); // Get all spots from the destination
+        }
+
+        // ✅ Build the response
+        Map<String, Object> response = new HashMap<>();
+        response.put("tripId", savedTrip.getId());
+        response.put("spots", spots);  // Directly include the full list with all attributes
+
+        return ResponseEntity.ok(response);
     }
-    else {
-    	for (Collaborator collaborator : trip.getCollaborators()) {
-    	    String subject = "New Trip Added!";
-    	    String body ="Hi there!\r\n"
-    	    		+ "You've been added as a collaborator to an exciting new trip planned on TripCraft. The trip is headed to "+trip.getDestination()+" from "+trip.getStartDate()+" to "+trip.getEndDate() +" As a "+collaborator.getRole()+", you'll be able to view and contribute to the trip details. Log in to your TripCraft account to explore the plan and join the adventure!\r\n"
-    	    		+ "\r\n"
-    	    		+ "";
-    	    emailSenderService.sendEmail(collaborator.getEmail(), subject, body);
-    	}
 
-    }
-    trip.setCreatedAt(LocalDateTime.now());
-
-    
-    System.out.println("Before Save: " + trip);
-    Trip savedTrip = tripRepository.save(trip);
-    System.out.println("After Save: " + savedTrip);
-
-    // Step 3: Find all trips with the same destination
-    List<String> tripIdsWithSameDestination = tripRepository.findByDestination(trip.getDestination())
-            .stream()
-            .map(Trip::getId)
-            .collect(Collectors.toList());
-
-    // Step 4: Fetch itineraries and safely collect activities
-    List<Activity> activities = itineraryRepository.findByTripIdIn(tripIdsWithSameDestination)
-            .stream()
-            .filter(itinerary -> itinerary.getActivities() != null)
-            .flatMap(itinerary -> itinerary.getActivities().stream())
-            .collect(Collectors.toList());
-
-    // Step 5: Extract unique locations and estimated costs
-    List<Map<String, Object>> locationSuggestions = activities.stream()
-        .collect(Collectors.toMap(
-            Activity::getLocation,
-            activity -> {
-                Map<String, Object> map = new HashMap<>();
-                map.put("location", activity.getLocation());
-                map.put("estimatedCost", activity.getEstimatedCost());
-                return map;
-            },
-            (existing, replacement) -> existing // if duplicate location, keep the first
-        ))
-        .values()
-        .stream()
-        .collect(Collectors.toList());
-
-    // Step 6: Return response
-    Map<String, Object> response = new HashMap<>();
-    response.put("tripId", savedTrip.getId());
-    response.put("recommendations", locationSuggestions);
-
-    return ResponseEntity.ok(response);
-}
-  // ✅ Update an existing trip
+   // ✅ Update an existing trip
     @PutMapping("/{id}")
     public ResponseEntity<Trip> updateTrip(@PathVariable String id, @RequestBody Trip updatedTrip) {
         if (!tripRepository.existsById(id)) {
@@ -214,6 +224,8 @@ public class TripController {
         trip.setAiGenerated(true); // Set isAiGenerated to true as per requirement
         trip.setStatus("Planned");
         trip.setCreatedAt(LocalDateTime.now()); // Set current time
+        String randomThumbnail = imageUrls.get(new Random().nextInt(imageUrls.size()));
+        trip.setThumbnail(randomThumbnail);
 
         // Step 2: Handle collaborators
         if (trip.getCollaborators() == null || trip.getCollaborators().isEmpty()) {
@@ -336,8 +348,7 @@ public class TripController {
                 activity.setDate(LocalDate.parse((String) activityDetails.get("date")));
                 activity.setName((String) activityDetails.get("name"));
                 activity.setLocation((String) activityDetails.get("location"));
-                activity.setImage((String) activityDetails.get("image"));
-                activity.setTimeSlot((String) activityDetails.get("timeSlot")); // Assuming Activity uses timeSlot
+                 activity.setTimeSlot((String) activityDetails.get("timeSlot")); // Assuming Activity uses timeSlot
                 activity.setEstimatedCost(((Number) activityDetails.get("estimatedCost")).doubleValue());
                 return activity;
             })
