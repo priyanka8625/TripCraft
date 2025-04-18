@@ -22,8 +22,17 @@ public class Trip {
     private List<Collaborator> collaborators;
     private List<String> preferences; // New preference array attribute
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    // Getters and setters
+    private int people;
+    public int getPeople() {
+		return people;
+	}
+	public void setPeople(int people) {
+		this.people = people;
+	}
+	public void setPreferences(List<String> preferences) {
+		this.preferences = preferences;
+	}
+	// Getters and setters
     public String getId() {
         return id;
     }

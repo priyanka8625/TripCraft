@@ -52,8 +52,8 @@ public class Activity {
 	private String name;
     private String location;
     private String image;
-    @JsonProperty("time_slot")
+//    @JsonProperty("time_slot")
     private String timeSlot;
-    @JsonProperty("estimated_cost")
+//    @JsonProperty("estimated_cost")
     private double estimatedCost;
 }

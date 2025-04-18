@@ -70,8 +70,8 @@ public class GeminiController {
                   "name": "Visit Eiffel Tower",
                   "location": "Paris, France",
                   "image": "url",
-                  "time_slot": "10:00 AM - 12:00 PM",
-                  "estimated_cost": 20.00
+                  "timeSlot": "10:00 AM - 12:00 PM",
+                  "estimatedCost": 20.00
                 }
               ]
             }

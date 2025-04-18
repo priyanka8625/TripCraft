@@ -1,6 +1,8 @@
 package com.tripCraft.Controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.tripCraft.Services.EmailSenderService;
 import com.tripCraft.model.Activity;
 import com.tripCraft.model.Collaborator;
@@ -8,6 +10,7 @@ import com.tripCraft.model.Itinerary;
 import com.tripCraft.model.ItineraryRequest;
 import com.tripCraft.model.Trip;
 import com.tripCraft.model.User;
+import com.tripCraft.repository.DestinationRepository;
 import com.tripCraft.repository.ItineraryRepository;
 import com.tripCraft.repository.TripRepository;
 import com.tripCraft.repository.UserRepo;
@@ -15,8 +18,11 @@ import com.tripCraft.util.CurrentUserUtil;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +51,8 @@ public class TripController {
 	@Autowired
     private  UserRepo userRepository;
   
+	@Autowired
+	private DestinationRepository destinationRepository;
     @Autowired
     private ItineraryRepository itineraryRepository;
     @Autowired
@@ -213,7 +221,7 @@ public class TripController {
         }
 
         // Step 3: Check if destination exists in the database
-        boolean destinationExists = tripRepository.existsByDestination(trip.getDestination());
+        boolean destinationExists = destinationRepository.existsByDestination(trip.getDestination());
 
         // Step 4: Call appropriate service based on destination existence
         Itinerary itinerary;
@@ -273,40 +281,6 @@ public class TripController {
         return (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
     }
 
-    private Itinerary callPythonMicroservice(Trip trip) {
-        // Prepare request body for Flask /similarity endpoint
-    	Map<String, Object> requestBody = new HashMap<>();
-    	requestBody.put("destination", trip.getDestination());
-
-    	// Send preferences as a list
-    	List<String> preferences = (trip.getPreferences() != null && !trip.getPreferences().isEmpty())
-    	    ? trip.getPreferences()
-    	    : List.of("adventure");
-    	requestBody.put("preferences", preferences);
-
-        // Set headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        // Create HTTP entity
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        try {
-            // Call Flask endpoint
-            ResponseEntity<String> response = restTemplate.postForEntity(pythonMicroserviceUrl, entity, String.class);
-
-            if (response.getStatusCode() != HttpStatus.OK) {
-                throw new RuntimeException("Python microservice failed: " + response.getStatusCode());
-            }
-
-            // Parse response
-            String jsonResponse = response.getBody();
-            return parsePythonResponse(jsonResponse, trip.getDestination());
-        } catch (Exception e) {
-            throw new RuntimeException("Error calling Python microservice: " + e.getMessage(), e);
-        }
-        
-    }
     private Itinerary parsePythonResponse(String jsonResponse, String destination) throws Exception {
         // Parse JSON response from Flask
         Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
@@ -341,6 +315,44 @@ public class TripController {
         itinerary.setActivities(activities);
         return itinerary;
     }
-    
-   
+    private Itinerary callPythonMicroservice(Trip trip) {
+        String flaskUrl = "http://localhost:5000/generate_itinerary";
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode json = objectMapper.createObjectNode();
+
+        json.put("destination", trip.getDestination());
+        json.put("budget", trip.getBudget());
+
+        int peopleCount = (trip.getCollaborators() != null ? trip.getCollaborators().size() : 0) + 1;
+        json.put("people", peopleCount);
+        json.put("startDate", trip.getStartDate().toString());
+        json.put("endDate", trip.getEndDate().toString());
+
+        if (trip.getPreferences() != null && !trip.getPreferences().isEmpty()) {
+            ArrayNode preferencesArray = objectMapper.valueToTree(trip.getPreferences());
+            json.set("preferences", preferencesArray);
+        }
+
+        HttpEntity<String> entity = new HttpEntity<>(json.toString(), headers);
+
+        try {
+            ResponseEntity<Itinerary> response = restTemplate.exchange(
+                flaskUrl,
+                HttpMethod.POST,
+                entity,
+                Itinerary.class
+            );
+
+            return response.getBody();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error calling Python microservice: " + e.getMessage(), e);
+        }
     }
+  
+}
