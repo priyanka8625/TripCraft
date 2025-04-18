@@ -99,6 +99,8 @@ def find_similar_activities(destination, preferences, budget, people, days):
         rating = spot.get('rating', 4.0)
         cost = spot.get('estimatedCost', 10) * people
         time_slot = spot.get('timeSlot', 'daytime').lower()
+        latitude = spot.get('latitude', 0)
+        longitude = spot.get('longitude', 0)
         # Normalize time slot
         if time_slot not in valid_time_slots:
             time_slot = 'daytime'
@@ -123,7 +125,10 @@ def find_similar_activities(destination, preferences, budget, people, days):
                 "name": spot["name"],
                 "location": spot["location"],
                 "estimatedCost": spot["estimatedCost"],  # Per person
-                "timeSlot": time_slot
+                "timeSlot": time_slot,
+                "category": category.capitalize(),
+                "latitude": latitude,
+                "longitude": longitude
             },
             "similarity_score": similarity_score,
             "rating": rating,
