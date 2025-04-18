@@ -103,6 +103,7 @@ def preprocess_activities(activities, budget_per_person_per_day):
 
 # Generate itinerary
 def generate_itinerary(user_input):
+    print("Running generate_itinerary with category, latitude, longitude, and rating support")
     # Extract input
     start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
     end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
@@ -164,7 +165,8 @@ def generate_itinerary(user_input):
         "timeSlot": "afternoon",
         "category": "Travel",
         "latitude": 0,
-        "longitude": 0
+        "longitude": 0,
+        "rating": 0
     })
     used_slots[1].append("afternoon")
     
@@ -189,7 +191,8 @@ def generate_itinerary(user_input):
                     "timeSlot": time_slot,
                     "category": activity["category"],
                     "latitude": activity["latitude"],
-                    "longitude": activity["longitude"]
+                    "longitude": activity["longitude"],
+                    "rating": activity["rating"]
                 })
                 remaining_budget -= cost
                 used_slots[day].append(time_slot)
@@ -207,7 +210,8 @@ def generate_itinerary(user_input):
         "timeSlot": "morning",
         "category": "Travel",
         "latitude": 0,
-        "longitude": 0
+        "longitude": 0,
+        "rating": 0
     })
     
     # Validate itinerary
@@ -216,6 +220,8 @@ def generate_itinerary(user_input):
         raise ValueError("Itinerary exceeds budget")
     
     return {"activities": itinerary}
+
+
 
 if __name__ == "__main__":
     main()
