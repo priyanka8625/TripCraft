@@ -1,0 +1,14 @@
+/* MapComponent.css */
+.custom-number-icon .numbered-marker {
+    background-color: #10b981; /* emerald-500 */
+    color: white;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  }
+  

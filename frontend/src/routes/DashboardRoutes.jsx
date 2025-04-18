@@ -5,6 +5,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import DisplayItinerary from '../pages/Dashboard/DisplayItinerary';
 import CreateTripForm from '../pages/Dashboard/PlanItinerary/CreateTripForm';
 import PlanMethodSelection from '../pages/Dashboard/PlanItinerary/PlanMethodSelection';
+import GenItineraryJSX from '../GenItineraryJSX/GenItineraryJSX';
 
 function DashboardRoutes() {
   return (
@@ -15,6 +16,8 @@ function DashboardRoutes() {
         <Route path="plan/ai" element={<CreateTripForm />} />
         <Route path="plan/manual" element={<CreateTripForm />} />
         <Route path="itinerary" element={<DisplayItinerary />} />
+        <Route path="plan/manual/generate" element={<GenItineraryJSX />} />
+        
       </Route>
     </Routes>
   );

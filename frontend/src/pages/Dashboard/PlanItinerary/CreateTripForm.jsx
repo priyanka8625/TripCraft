@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createTripWithAi } from '../../../services/tripService';
+import LoadingScreen from '../../../components/Dashboard/LoadingScreen';
 
 function App() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     destination: '',
@@ -91,7 +97,7 @@ function App() {
       case 2:
         if (!formData.startDate) newErrors.startDate = 'Start date is required';
         if (!formData.endDate) newErrors.endDate = 'End date is required';
-        if (formData.startDate > formData.endDate)
+        if (formData.startDate && formData.endDate && formData.startDate > formData.endDate)
           newErrors.endDate = 'End date must be after start date';
         break;
       case 3:
@@ -109,22 +115,40 @@ function App() {
   const handleNext = () => {
     if (validateStep()) {
       setCurrentStep(currentStep + 1);
+      setApiError(''); // Clear API errors when moving to next step
     }
   };
 
   const handleBack = () => {
     setCurrentStep(currentStep - 1);
+    setApiError(''); // Clear API errors when going back
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateStep()) {
-      console.log('Form submitted:', formData);
+      console.log("data", formData);
+      
+      setIsLoading(true);
+      setApiError('');
+      try {
+        const response = await createTripWithAi(formData);
+        // Redirect to itinerary page with tripId
+        navigate('/dashboard/itinerary', { state: { tripId: response.trip.id } });
+      } catch (error) {
+        setApiError(error.message || 'Failed to create trip');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <div className="flex-1 h-full flex items-start justify-center p-4 bg-gradient-to-br  to-teal-50   ">
+    <div className="flex-1 h-full flex items-start justify-center p-4 bg-gradient-to-br to-teal-50">
       <div className="bg-white p-8 mt-9 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] w-full max-w-2xl border border-emerald-50">
         <div className="mb-8">
           <div className="flex justify-between items-center relative">
@@ -145,6 +169,12 @@ function App() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {apiError && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-xl">
+              {apiError}
+            </div>
+          )}
+
           {currentStep === 1 && (
             <div className="space-y-4">
               <div>

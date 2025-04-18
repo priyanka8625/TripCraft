@@ -103,6 +103,7 @@ def preprocess_activities(activities, budget_per_person_per_day):
 
 # Generate itinerary
 def generate_itinerary(user_input):
+    print("Running generate_itinerary with category, latitude, longitude, and rating support")
     # Extract input
     start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
     end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
@@ -156,12 +157,16 @@ def generate_itinerary(user_input):
     # Add arrival
     city = destination.split(',')[0]
     itinerary.append({
-        "date": start_date.strftime("%Y-%m-%d"),
+        "startDate": start_date.strftime("%Y-%m-%d"),
         "day": 1,
         "estimatedCost": 0,
         "location": destination,
         "name": f"Arrival in {city}",
-        "timeSlot": "afternoon"
+        "timeSlot": "afternoon",
+        "category": "Travel",
+        "latitude": 0,
+        "longitude": 0,
+        "rating": 0
     })
     used_slots[1].append("afternoon")
     
@@ -178,12 +183,16 @@ def generate_itinerary(user_input):
                 time_slot not in used_slots[day] and 
                 total_duration[day] + duration <= 8):
                 itinerary.append({
-                    "date": (start_date + timedelta(days=day - 1)).strftime("%Y-%m-%d"),
+                    "startDate": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
                     "day": day,
                     "estimatedCost": cost,
                     "location": activity["location"],
                     "name": activity["name"],
-                    "timeSlot": time_slot
+                    "timeSlot": time_slot,
+                    "category": activity["category"],
+                    "latitude": activity["latitude"],
+                    "longitude": activity["longitude"],
+                    "rating": activity["rating"]
                 })
                 remaining_budget -= cost
                 used_slots[day].append(time_slot)
@@ -193,12 +202,16 @@ def generate_itinerary(user_input):
     
     # Add departure
     itinerary.append({
-        "date": end_date.strftime("%Y-%m-%d"),
+        "startDate": end_date.strftime("%Y-%m-%d"),
         "day": days,
         "estimatedCost": 0,
         "location": destination,
         "name": f"Departure from {city}",
-        "timeSlot": "morning"
+        "timeSlot": "morning",
+        "category": "Travel",
+        "latitude": 0,
+        "longitude": 0,
+        "rating": 0
     })
     
     # Validate itinerary
