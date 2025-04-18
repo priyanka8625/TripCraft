@@ -128,7 +128,8 @@ def find_similar_activities(destination, preferences, budget, people, days):
                 "timeSlot": time_slot,
                 "category": category.capitalize(),
                 "latitude": latitude,
-                "longitude": longitude
+                "longitude": longitude,
+                "rating": rating
             },
             "similarity_score": similarity_score,
             "rating": rating,
@@ -150,7 +151,7 @@ def find_similar_activities(destination, preferences, budget, people, days):
         similar_spots.sort(key=lambda x: (x["similarity_score"], x["rating"]), reverse=True)
         
         # Ensure enough activities (fill 6-8 hours/day)
-        required_activities = 8 * (days - 1) // 2  # Approx. 8 hours/day, 2-hour avg duration
+        required_activities = 10 * (days - 1) // 2  # Increased to ensure 6-8 hours
         if len(similar_spots) >= required_activities:
             return similar_spots
         else:
@@ -161,5 +162,5 @@ def find_similar_activities(destination, preferences, budget, people, days):
         # No preferences: sort by rating
         all_spots.sort(key=lambda x: x["rating"], reverse=True)
         # Return top spots (enough for 6-8 hours/day)
-        required_activities = 8 * (days - 1) // 2
+        required_activities = 10 * (days - 1) // 2
         return all_spots[:required_activities]
