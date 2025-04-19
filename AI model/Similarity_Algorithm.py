@@ -60,9 +60,8 @@ def compute_similarity(user_prefs, spot_tags):
     user_vec = np.array([1 if tag in user_prefs else 0 for tag in all_possible_tags])
     spot_vec = np.array([1 if tag in spot_tags else 0 for tag in all_possible_tags])
     similarity = cosine_similarity([user_vec], [spot_vec])[0][0]
-    # Boost history preference
     if "history" in user_prefs and "history" in spot_tags:
-        similarity *= 1.5
+        similarity *= 2.0
     return similarity
 
 def find_similar_activities(destination, preferences, budget, people, days):
@@ -117,9 +116,8 @@ def find_similar_activities(destination, preferences, budget, people, days):
 
         all_spots.append(activity_data)
         if preferences and (
-            any(tag in preferences for tag in category_to_tags.get(category, []))
-            or any(tag in preferences for tag in tags)
-            or similarity_score > 0
+            "history" in preferences and "history" in tags or
+            similarity_score > 0
         ):
             similar_spots.append(activity_data)
 
@@ -132,7 +130,7 @@ def find_similar_activities(destination, preferences, budget, people, days):
         if invalid_prefs:
             raise ValueError(f"Invalid preferences: {invalid_prefs}")
         
-        min_required = days * 2  # At least 2 activities per day
+        min_required = days * 2  # Aim for 2 activities per day
         if len(similar_spots) < min_required:
             print(f"Supplementing with {min_required - len(similar_spots)} highest-rated spots")
             remaining_spots = sorted(
