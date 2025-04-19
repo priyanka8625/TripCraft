@@ -4,9 +4,10 @@ from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 import json
 import joblib
+import os
 from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags
 
-valid_time_slots = ["morning", "afternoon", "evening", "daytime"]
+valid_time_slots = ["morning", "afternoon", "daytime"]
 
 FEATURE_ORDER = [
     "similarity_score",
@@ -16,7 +17,6 @@ FEATURE_ORDER = [
     "duration_normalized",
     "timeSlot_morning",
     "timeSlot_afternoon",
-    "timeSlot_evening",
     "timeSlot_daytime"
 ]
 
@@ -108,8 +108,14 @@ def generate_itinerary(user_input):
     budget_per_person_per_day = budget / people / days
     budget_per_person = budget / people
     
+    # Force model retraining
+    model_path = "activity_scoring_model.pkl"
+    if os.path.exists(model_path):
+        os.remove(model_path)
+        print(f"Deleted {model_path} to force retraining")
+    
     try:
-        model = joblib.load("activity_scoring_model.pkl")
+        model = joblib.load(model_path)
     except FileNotFoundError:
         model, _ = train_model()
     
@@ -118,6 +124,7 @@ def generate_itinerary(user_input):
         raise ValueError("No activities found for the destination")
     
     X = preprocess_activities(activities, budget_per_person_per_day)
+    print(f"Features in X: {X.columns.tolist()}")
     if X.columns.tolist() != FEATURE_ORDER:
         raise ValueError(f"Feature mismatch: Expected {FEATURE_ORDER}, got {X.columns.tolist()}")
     scores = model.predict(X)
@@ -128,22 +135,13 @@ def generate_itinerary(user_input):
     remaining_budget = budget
     used_slots = {i: [] for i in range(1, days + 1)}
     total_duration = {i: 0 for i in range(1, days + 1)}
+    used_spots = set()
     
-    city = destination.split(',')[0]
-    itinerary.append({
-        "date": start_date.strftime("%a, %d %b %Y 18:30:00 GMT"),
-        "day": 1,
-        "estimatedCost": 0,
-        "location": destination,
-        "name": f"Arrival in {city}",
-        "timeSlot": "afternoon"
-    })
-    used_slots[1].append("afternoon")
-    
-    for day in range(2, days):
+    # First pass: High-similarity, high-rated spots
+    for day in range(1, days + 1):
         available_activities = sorted(
-            activities,
-            key=lambda x: (x["score"], -sum(1 for i in itinerary if i["name"] == x["activity"]["name"])),
+            [a for a in activities if a["activity"]["name"] not in used_spots],
+            key=lambda x: (x["similarity_score"], x["rating"]),
             reverse=True
         )
         activity_index = 0
@@ -153,8 +151,13 @@ def generate_itinerary(user_input):
             time_slot = activity["timeSlot"].lower()
             duration = available_activities[activity_index]["duration"]
             
+            if time_slot in used_slots[day]:
+                print(f"Time slot {time_slot} already used on day {day}, skipping {activity['name']}")
+                activity_index += 1
+                continue
+            
             if cost <= remaining_budget and total_duration[day] + duration <= 8:
-                hour = 9 if time_slot == 'morning' else 14 if time_slot == 'afternoon' else 18 if time_slot == 'evening' else 11
+                hour = 9 if time_slot == 'morning' else 14 if time_slot == 'afternoon' else 11
                 itinerary.append({
                     "date": (start_date + timedelta(days=day-1)).strftime(f"%a, %d %b %Y {hour:02d}:00:00 GMT"),
                     "day": day,
@@ -166,26 +169,125 @@ def generate_itinerary(user_input):
                 remaining_budget -= cost
                 used_slots[day].append(time_slot)
                 total_duration[day] += duration
+                used_spots.add(activity["name"])
                 print(f"Added activity: {activity['name']} on day {day}, cost: {cost}, timeSlot: {time_slot}, duration: {duration}, remaining_budget: {remaining_budget}")
             else:
                 print(f"Skipped activity: {activity['name']} on day {day}, cost: {cost}, remaining_budget: {remaining_budget}, duration: {total_duration[day] + duration}")
             
             activity_index += 1
     
-    itinerary.append({
-        "startDate": end_date.strftime("%Y-%m-%d"),
-        "day": days,
-        "estimatedCost": 0,
-        "location": destination,
-        "name": f"Departure from {city}",
-        "timeSlot": "morning"
-    })
+    # Second pass: Low-cost spots for underfilled days
+    for day in range(1, days + 1):
+        if total_duration[day] < 6:
+            print(f"Day {day} underfilled (duration: {total_duration[day]}), trying low-cost spots")
+            low_cost_activities = sorted(
+                [a for a in activities if a["activity"]["name"] not in used_spots],
+                key=lambda x: x["activity"]["estimatedCost"],
+                reverse=False
+            )
+            activity_index = 0
+            while total_duration[day] < 6 and activity_index < len(low_cost_activities):
+                activity = low_cost_activities[activity_index]["activity"]
+                cost = activity["estimatedCost"] * people
+                time_slot = activity["timeSlot"].lower()
+                duration = low_cost_activities[activity_index]["duration"]
+                
+                if time_slot in used_slots[day]:
+                    print(f"Time slot {time_slot} already used on day {day}, skipping {activity['name']}")
+                    activity_index += 1
+                    continue
+                
+                if cost <= remaining_budget and total_duration[day] + duration <= 8:
+                    hour = 9 if time_slot == 'morning' else 14 if time_slot == 'afternoon' else 11
+                    itinerary.append({
+                        "date": (start_date + timedelta(days=day-1)).strftime(f"%a, %d %b %Y {hour:02d}:00:00 GMT"),
+                        "day": day,
+                        "estimatedCost": cost,
+                        "location": activity["location"],
+                        "name": activity["name"],
+                        "timeSlot": time_slot
+                    })
+                    remaining_budget -= cost
+                    used_slots[day].append(time_slot)
+                    total_duration[day] += duration
+                    used_spots.add(activity["name"])
+                    print(f"Added low-cost activity: {activity['name']} on day {day}, cost: {cost}, timeSlot: {time_slot}, duration: {duration}, remaining_budget: {remaining_budget}")
+                else:
+                    print(f"Skipped low-cost activity: {activity['name']} on day {day}, cost: {cost}, remaining_budget: {remaining_budget}, duration: {total_duration[day] + duration}")
+                
+                activity_index += 1
     
+    # Redistribution: Move excess activities to empty days
+    activities_per_day = {i: [] for i in range(1, days + 1)}
+    for activity in itinerary:
+        activities_per_day[activity["day"]].append(activity)
+    
+    for day in range(1, days + 1):
+        if len(activities_per_day[day]) > 3:
+            excess = activities_per_day[day][3:]
+            activities_per_day[day] = activities_per_day[day][:3]
+            print(f"Day {day} has {len(excess)} excess activities, redistributing")
+            for excess_activity in excess:
+                used_spots.remove(excess_activity["name"])
+                used_slots[day].remove(excess_activity["timeSlot"])
+                total_duration[day] -= [a["duration"] for a in activities if a["activity"]["name"] == excess_activity["name"]][0]
+                remaining_budget += excess_activity["estimatedCost"]
+            
+            for excess_activity in excess:
+                for target_day in range(1, days + 1):
+                    if len(activities_per_day[target_day]) < 2 and total_duration[target_day] < 6:
+                        time_slot = excess_activity["timeSlot"]
+                        if time_slot in used_slots[target_day]:
+                            available_slots = [ts for ts in valid_time_slots if ts not in used_slots[target_day]]
+                            time_slot = available_slots[0] if available_slots else time_slot
+                        duration = [a["duration"] for a in activities if a["activity"]["name"] == excess_activity["name"]][0]
+                        if total_duration[target_day] + duration <= 8:
+                            hour = 9 if time_slot == 'morning' else 14 if time_slot == 'afternoon' else 11
+                            new_activity = {
+                                "date": (start_date + timedelta(days=target_day-1)).strftime(f"%a, %d %b %Y {hour:02d}:00:00 GMT"),
+                                "day": target_day,
+                                "estimatedCost": excess_activity["estimatedCost"],
+                                "location": excess_activity["location"],
+                                "name": excess_activity["name"],
+                                "timeSlot": time_slot
+                            }
+                            activities_per_day[target_day].append(new_activity)
+                            used_slots[target_day].append(time_slot)
+                            total_duration[target_day] += duration
+                            used_spots.add(new_activity["name"])
+                            remaining_budget -= new_activity["estimatedCost"]
+                            print(f"Redistributed {new_activity['name']} to day {target_day}, timeSlot: {time_slot}")
+                            break
+    
+    # Flatten itinerary
+    itinerary = []
+    for day in range(1, days + 1):
+        itinerary.extend(activities_per_day[day])
+    
+    # Check budget
     total_cost = sum(activity["estimatedCost"] for activity in itinerary)
     if total_cost > budget:
-        raise ValueError("Itinerary exceeds budget")
+        overshoot = total_cost - budget
+        if overshoot > budget * 0.1:  # Significant overshoot (>10%)
+            print(f"Budget overshoot ({total_cost} > {budget}), reducing spots")
+            new_itinerary = []
+            remaining_budget = budget
+            for day in range(1, days + 1):
+                day_activities = sorted(activities_per_day[day], key=lambda x: x["estimatedCost"])
+                added = 0
+                for activity in day_activities[:2]:  # Limit to 2 spots if overshoot
+                    if activity["estimatedCost"] <= remaining_budget:
+                        new_itinerary.append(activity)
+                        remaining_budget -= activity["estimatedCost"]
+                        added += 1
+                if added == 0:
+                    print(f"No activities added for day {day} due to budget constraints")
+            itinerary = new_itinerary
+            total_cost = sum(activity["estimatedCost"] for activity in itinerary)
+        else:
+            print(f"Minor budget overshoot ({total_cost} > {budget}), proceeding")
     
-    return {"activities": itinerary}
+    return {"activities": sorted(itinerary, key=lambda x: (x["day"], x["date"]))}
 
 if __name__ == "__main__":
     pass
