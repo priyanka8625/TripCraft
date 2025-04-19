@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTripWithAi } from '../../../services/tripService';
-import LoadingScreen from '../../../components/Dashboard/LoadingScreen';
+import LoadingScreen from '../../../components/Dashboard/PlanItinerary/LoadingScreen';
 
 function App() {
   const navigate = useNavigate();

@@ -11,9 +11,6 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import DashboardRoutes from './routes/DashboardRoutes';
 import LoginRedirectWrapper from './routes/LoginRedirectWrapper';
 import SignupRedirectWrapper from './routes/SignupRedirectWrapper';
-import DisplayItinerary from './pages/Dashboard/DisplayItinerary';
-import Loading from './components/Dashboard/LoadingScreen';
-import LoadingScreen from './components/Dashboard/LoadingScreen';
 
 function App() {
   return (
@@ -33,7 +30,6 @@ function App() {
           } />
           <Route path="/login" element={<LoginRedirectWrapper />} />
           <Route path="/signup" element={<SignupRedirectWrapper />} />
-          <Route path="/itinerary" element={<LoadingScreen />} />
           <Route path="/dashboard/*" element={
             <ProtectedRoute>
               <DashboardRoutes />

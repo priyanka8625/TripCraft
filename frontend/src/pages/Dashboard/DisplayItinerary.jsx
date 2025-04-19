@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import ActivityCard from '../../components/Dashboard/ActivityCard';
-import MapComponent from '../../components/Dashboard/MapComponent';
-import LoadingScreen from '../../components/Dashboard/LoadingScreen';
-import { getItineraryWithTripId } from '../../services/tripService';
+import ActivityCard from '../../components/Dashboard/PlanItinerary/ActivityCard.jsx';
+import MapComponent from '../../components/Dashboard/PlanItinerary/MapComponent.jsx';
+import LoadingScreen from '../../components/Dashboard/PlanItinerary/LoadingScreen.jsx';
+import { getItineraryWithTripId } from '../../services/tripService.js';
 
 export default function DisplayItinerary() {
   const [activeDay, setActiveDay] = useState(0);
@@ -13,6 +13,8 @@ export default function DisplayItinerary() {
   const [error, setError] = useState('');
   const location = useLocation();
   const { tripId } = location.state || {};
+  const [focusedLocation, setFocusedLocation] = useState(null); // New state for focused location
+
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -40,11 +42,14 @@ export default function DisplayItinerary() {
             day: activity.day,
             date: activity.date || `Day ${activity.day}`,
             name: activity.name,
-            location: {
+            coordinates: {
               lat: activity.latitude,
               lng: activity.longitude,
             },
+            location: activity.location,
             time_slot: activity.timeSlot,
+            rating: activity.rating,
+            category: activity.category,
             estimated_cost: activity.estimatedCost,
           });
           return acc;
@@ -77,7 +82,8 @@ export default function DisplayItinerary() {
   const currentActivities = tripDays.length > 0 ? tripDays[activeDay]?.activities || [] : [];
   const mappedLocations = currentActivities.map((activity) => ({
     name: activity.name,
-    coordinates: [activity.location.lat, activity.location.lng],
+    coordinates: [activity.coordinates.lat, activity.coordinates.lng],
+    rating: activity.rating
   }));
 
   if (isLoading) {
@@ -144,6 +150,7 @@ export default function DisplayItinerary() {
                     toggleEvent={toggleEvent}
                     isLast={index === currentActivities.length - 1}
                     isFirst={index === 0}
+                    onClick={() => setFocusedLocation([event.coordinates.lat, event.coordinates.lng])}
                   />
                 ))}
               </div>
@@ -156,7 +163,7 @@ export default function DisplayItinerary() {
               className="bg-white rounded-xl shadow-lg p-4"
               style={{ height: '500px' }}
             >
-              <MapComponent locations={mappedLocations} />
+              <MapComponent locations={mappedLocations} focusedLocation={focusedLocation} />
             </div>
           </div>
         </div>

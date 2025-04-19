@@ -1,15 +1,26 @@
-// MapComponent.jsx
-import React from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import React, { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import "../../../public/css/MapComponent.css";
+import "../../../../public/css/MapComponent.css";
 
 // Remove default icon config
 delete L.Icon.Default.prototype._getIconUrl;
 
-// Component starts
-const MapComponent = ({ locations }) => {
+// Child component to control map zooming
+const MapController = ({ focusedLocation }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (focusedLocation) {
+      map.flyTo(focusedLocation, 15, { duration: 1.5 }); // Smooth zoom to level 15
+    }
+  }, [focusedLocation, map]);
+
+  return null;
+};
+
+const MapComponent = ({ locations, focusedLocation }) => {
   const center = locations?.[0]?.coordinates || [18.9696, 72.8205];
 
   return (
@@ -36,10 +47,13 @@ const MapComponent = ({ locations }) => {
           >
             <Popup>
               <strong>{location.name}</strong>
+              <strong>⭐ {location.rating}</strong>
             </Popup>
           </Marker>
         );
       })}
+
+      <MapController focusedLocation={focusedLocation} />
     </MapContainer>
   );
 };
