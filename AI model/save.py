@@ -1,0 +1,3 @@
+from Itinerary_Generator import train_model
+model, _ = train_model()
+print("Model saved to activity_scoring_model.pkl")
