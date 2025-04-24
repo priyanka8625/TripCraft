@@ -6,7 +6,7 @@ const LoadingScreen = ({ onComplete, loadingTime = 3000 }) => {
 
   const loadingMessages = [
     "Finding the best local spots for you...",
-    "Curating the perfect experiences...",
+    "Fetching the perfect experiences...",
     "Checking the weather for your trip...",
     "Discovering hidden gems in your destination...",
     "Matching activities to your preferences...",
@@ -54,7 +54,7 @@ const LoadingScreen = ({ onComplete, loadingTime = 3000 }) => {
         </div>
         
         <h2 className="text-2xl font-bold text-emerald-800 text-center mb-2">
-          Crafting Your Perfect Itinerary
+          Fetching Your Perfect Itinerary
         </h2>
         
         <div className="h-16 flex items-center justify-center">

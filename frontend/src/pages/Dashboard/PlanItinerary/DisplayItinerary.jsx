@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import ActivityCard from '../../components/Dashboard/PlanItinerary/ActivityCard.jsx';
-import MapComponent from '../../components/Dashboard/PlanItinerary/MapComponent.jsx';
-import LoadingScreen from '../../components/Dashboard/PlanItinerary/LoadingScreen.jsx';
-import { getItineraryWithTripId } from '../../services/tripService.js';
+import ActivityCard from '../../../components/Dashboard/PlanItinerary/ActivityCard.jsx';
+import MapComponent from '../../../components/Dashboard/PlanItinerary/MapComponent.jsx';
+import LoadingScreen from '../../../components/Dashboard/PlanItinerary/LoadingScreen.jsx';
+import { getItineraryWithTripId } from '../../../services/tripService.js';
 
 export default function DisplayItinerary() {
   const [activeDay, setActiveDay] = useState(0);

@@ -6,14 +6,14 @@ const ServiceSection = () => {
   const [expandedIndex, setExpandedIndex] = useState(null);
   const itineraryServices = [
     {
-      image: "./bbg1.jpg",
+      image: "./img/bbg1.jpg",
       title: "Generate Itinerary with AI",
       description:
         "Let our AI craft a personalized travel plan tailored to your preferences.",
       gradient: "from-blue-500 to-indigo-600",
     },
     {
-      image: "./bbg2.jpg",
+      image: "./img/bbg2.jpg",
       title: "Generate Itinerary from Scratch",
       description: "Build your own itinerary with our easy-to-use tools.",
       gradient: "from-purple-500 to-pink-600",
@@ -28,7 +28,7 @@ const ServiceSection = () => {
       postTitle: "Exploring the Pink City",
       description:
         "Visited the majestic Amber Fort and tasted authentic Rajasthani cuisine.",
-      image: "./bbg1.jpg",
+      image: "./img/bbg1.jpg",
       reviews: 4.5,
     },
     {
@@ -37,7 +37,7 @@ const ServiceSection = () => {
       date: "March 10, 2025",
       postTitle: "Beachside Bliss",
       description: "Relaxing on the golden beaches and enjoying water sports.",
-      image: "./bbg2.jpg",
+      image: "./img/bbg2.jpg",
       reviews: 4.8,
     },
     {
@@ -47,7 +47,7 @@ const ServiceSection = () => {
       postTitle: "Snowy Adventures",
       description:
         "Thrilling experience skiing and exploring the snow-covered mountains.",
-      image: "./bbg3.jpg",
+      image: "./img/bbg3.jpg",
       reviews: 4.7,
     },
     {
@@ -56,7 +56,7 @@ const ServiceSection = () => {
       date: "March 1, 2025",
       postTitle: "Backwaters and Spices",
       description: "Serene houseboat ride and exploring spice plantations.",
-      image: "./bbg4.jpg",
+      image: "./img/bbg4.jpg",
       reviews: 4.6,
     },
   ];
@@ -117,7 +117,7 @@ const ServiceSection = () => {
                   <div className="bg-grey-200 rounded-3xl shadow-2xl max-w-5xl w-full flex overflow-hidden backdrop-blur-md">
                     <div className="w-4/5">
                       <img
-                        src="/bbg5.jpg"
+                        src="./img/bbg5.jpg"
                         alt="Traveler in jungle"
                         className="w-full h-full"
                       />
@@ -153,7 +153,7 @@ const ServiceSection = () => {
         <div className="flex justify-center items-center w-5/6 mx-auto h-[55vh] bg-white shadow-lg rounded-3xl overflow-hidden">
           <div className="w-2/5 h-full">
             <img
-              src="/bg7.jpg"
+              src="./img/bg7.jpg"
               alt="Beautiful Beach Cliff"
               className="w-full h-full object-cover"
             />

@@ -21,3 +21,14 @@ export const getItineraryWithTripId = async (tripId) => {
       throw new Error(error.response?.data?.message || 'Failed to fetch trip');
     }
 };
+
+// get all trips
+export const getAllTrips = async()=>{
+  try {
+    const response = await api.get(`/trips`);
+    console.log(response.data);
+    return response.data; // Return the Itinerary data
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to fetch trips');
+  }
+}

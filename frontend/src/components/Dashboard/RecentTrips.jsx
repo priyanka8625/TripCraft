@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Users, Wallet } from 'lucide-react';
+import TripCard from './Trips/TripCard';
 
 const RecentTrips = ({ trips = [] }) => {
   return (
@@ -12,33 +12,7 @@ const RecentTrips = ({ trips = [] }) => {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {trips.map((trip, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 cursor-pointer"
-          >
-            <img 
-              src={trip?.image} 
-              alt={trip?.name || 'Trip'} 
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="font-semibold text-gray-800">{trip?.name || 'Untitled Trip'}</h3>
-              <div className="mt-2 space-y-2">
-                <div className="flex items-center text-gray-600 cursor-pointer">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span>{trip?.destination || 'No destination'}</span>
-                </div>
-                <div className="flex items-center text-gray-600 cursor-pointer">
-                  <Users className="h-4 w-4 mr-2" />
-                  <span>{trip?.people || 0} People</span>
-                </div>
-                <div className="flex items-center text-gray-600 cursor-pointer">
-                  <Wallet className="h-4 w-4 mr-2" />
-                  <span>{trip?.budget || 'No budget set'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <TripCard key={index} trip={trip} />
         ))}
       </div>
     </div>

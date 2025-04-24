@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const images = [
-  "./bbg1.jpg",
-  "./bbg2.jpg",
-  "./bbg3.jpg",
-  "./bbg4.jpg",
-  "./bbg5.jpg",
+  "./img/bbg1.jpg",
+  "./img/bbg2.jpg",
+  "./img/bbg3.jpg",
+  "./img/bbg4.jpg",
+  "./img/bbg5.jpg",
   // "./bbg6.jpg",
   // "./bg1.jpg",
   // "./wallhaven-bbg1.jpg",

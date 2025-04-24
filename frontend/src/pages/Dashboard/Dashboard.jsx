@@ -10,32 +10,40 @@ function Dashboard() {
 
   const recentTrips = [
     {
-      image: 'img/bbg1.jpg',
-      name: "Bali Adventure",
+      thumbnail: './img/bbg1.jpg',
+      title: "Bali Adventure",
       destination: "Bali, Indonesia",
       people: 4,
-      budget: "₹19,600"
+      budget: "₹19,600",
+      startDate: '2025-04-21',
+      endDate: '2025-04-21'
     },
     {
-      image: "img/bbg2.jpg",
-      name: "Dubai Explorer",
+      thumbnail: "./img/bbg2.jpg",
+      title: "Dubai Explorer",
       destination: "Dubai, UAE",
       people: 2,
-      budget: "₹21,700"
+      budget: "₹21,700",
+      startDate: '2025-04-21',
+      endDate: '2025-04-21'
     },
     {
-      image: "img/bbg3.jpg",
-      name: "Maldives Retreat",
+      thumbnail: "./img/bbg3.jpg",
+      title: "Maldives Retreat",
       destination: "Maldives",
       people: 3,
-      budget: "₹11,300"
+      budget: "₹11,300",
+      startDate: '2025-04-21',
+      endDate: '2025-04-21'
     },
     {
-      image: "img/bbg4.jpg",
-      name: "Thailand Escape",
+      thumbnail: "./img/bbg4.jpg",
+      title: "Thailand Escape",
       destination: "Phuket, Thailand",
       people: 2,
-      budget: "₹15,400"
+      budget: "₹15,400",
+      startDate: '2025-04-21',
+      endDate: '2025-04-21'
     }
   ];
 
