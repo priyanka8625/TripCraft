@@ -6,6 +6,8 @@ import joblib
 import os
 from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags, fetch_low_cost_activities
 import time
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Valid time slots (kept for output but not constrained)
 valid_time_slots = ["morning", "afternoon", "evening", "daytime"]
@@ -51,16 +53,6 @@ def generate_training_data():
         data.append(record)
     return pd.DataFrame(data)
 
-def train_model():
-    if os.path.exists("activity_scoring_model.pkl"):
-        os.remove("activity_scoring_model.pkl")
-    data = generate_training_data()
-    X = data.drop("relevance_score", axis=1)[FEATURE_ORDER]
-    y = data["relevance_score"]
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X, y)
-    joblib.dump(model, "activity_scoring_model.pkl")
-    return model, FEATURE_ORDER
 
 def preprocess_activities(activities, budget_per_person_per_day):
     data = []
@@ -80,7 +72,7 @@ def preprocess_activities(activities, budget_per_person_per_day):
                 cost = 10.0
         activity["activity"]["estimatedCost"] = cost
         if "duration" not in activity:
-            activity["duration"] = 2  # Default to 2 hours
+            activity["duration"] = 2  
         duration = activity["duration"]
         record = {
             "similarity_score": activity.get("similarity_score", 0.0),
@@ -295,3 +287,51 @@ def generate_itinerary(user_input):
 
     print(f"Final itinerary: {len(itinerary)} activities, Total cost: {total_cost}")
     return {"activities": itinerary}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Training the model and checking the accuracy:-------
+def train_model():
+    if os.path.exists("activity_scoring_model.pkl"):
+        os.remove("activity_scoring_model.pkl")
+    data = generate_training_data()
+    X = data.drop("relevance_score", axis=1)[FEATURE_ORDER]
+    y = data["relevance_score"]
+
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+
+    print("📊 Model Evaluation:")
+    print(f"Mean Squared Error (MSE): {mse:.4f}")
+    print(f"Mean Absolute Error (MAE): {mae:.4f}")
+    print(f"R² Score: {r2:.4f}")
+
+    joblib.dump(model, "activity_scoring_model.pkl")
+    print("✅ Model saved as activity_scoring_model.pkl")
+    return model, FEATURE_ORDER
