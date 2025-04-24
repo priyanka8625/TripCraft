@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Feed from "./Feed/Feed";
+import Feed from "./Feeds/Feed";
 
 function SnapSafari() {
   return (
