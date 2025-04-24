@@ -29,6 +29,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -197,12 +198,25 @@ public class TripController {
         tripRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
-    private String getCurrentUserId() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof UserDetails) {
-            return ((UserDetails) principal).getUsername(); // Email or userId
+    public String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            System.out.println("No authenticated user found.");
+            throw new IllegalStateException("No authenticated user found.");
         }
-        return principal.toString();
+
+        Object principal = authentication.getPrincipal();
+        System.out.println("Principal: " + principal);
+
+        if (principal instanceof UserDetails) {
+            String username = ((UserDetails) principal).getUsername();
+            System.out.println("Authenticated user ID (from UserDetails): " + username);
+            return username;
+        }
+
+        String userId = principal.toString();
+        System.out.println("Authenticated user ID (from principal.toString): " + userId);
+        return userId;
     }
     
     public static class TripResponse {

@@ -4,6 +4,7 @@ package com.tripCraft.Controllers;
 import com.tripCraft.Services.ImageUploadService;
 import com.tripCraft.model.SnapSafari;
 import com.tripCraft.model.SnapSafari.Comment;
+import com.tripCraft.model.User;
 import com.tripCraft.repository.SnapSafariRepository;
 import com.tripCraft.repository.UserRepo;
 
@@ -34,37 +35,78 @@ public class SnapSafariController {
     private ImageUploadService imageUploadService;
 
     @Autowired
+    private TripController tripController;
+    @Autowired
     private UserRepo userRepository;
 
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadSnap(@RequestParam("userId") String userId,
+    public ResponseEntity<?> uploadSnap(
                                                  @RequestParam("destination") String destination,
                                                  @RequestParam("title") String title,
                                                  @RequestParam("caption") String caption,
                                                  @RequestParam("images") List<MultipartFile> imageFiles) throws IOException {
-    	 if (!userRepository.existsById(userId)) {
-    	        Map<String, String> response = new HashMap<>();
-    	        response.put("error", "User does not exist");
-    	        return ResponseEntity.badRequest().body(response);
-    	    }
-        List<String> imageUrls = new ArrayList<>();
-        for (MultipartFile file : imageFiles) {
-            String imageUrl = imageUploadService.uploadImage(file);  // Actual Cloudinary upload
-            imageUrls.add(imageUrl);
+    	
+    	
+    	try {
+            String userEmail = tripController.getCurrentUserId(); // Returns email, e.g., "test@example.com"
+            Optional<User> userOptional = userRepository.findByEmail(userEmail);
+            if (!userOptional.isPresent()) {
+                Map<String, String> response = new HashMap<>();
+                response.put("error", "User does not exist");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            User user = userOptional.get();
+            String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
+
+            List<String> imageUrls = new ArrayList<>();
+            for (MultipartFile file : imageFiles) {
+                String imageUrl = imageUploadService.uploadImage(file);
+                imageUrls.add(imageUrl);
+            }
+
+            SnapSafari post = new SnapSafari();
+            post.setUserId(userId); // Use the actual _id
+            post.setDestination(destination);
+            post.setTitle(title);
+            post.setCaption(caption);
+            post.setImages(imageUrls);
+            post.setCreatedAt(LocalDateTime.now());
+            post.setLikes(0);
+
+            return ResponseEntity.ok().body(snapSafariRepository.save(post));
+        } catch (IllegalStateException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Unauthenticated: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "Failed to upload post: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
-
-        SnapSafari post = new SnapSafari();
-        post.setUserId(userId);
-        post.setDestination(destination);
-        post.setTitle(title);
-        post.setCaption(caption);
-        post.setImages(imageUrls);
-        post.setLikes(0);
-        post.setCreatedAt(LocalDateTime.now());
-        post.setComments(new ArrayList<>());
-
-//        return ResponseEntity.ok(snapSafariRepository.save(post));
-        return ResponseEntity.ok().body(snapSafariRepository.save(post));
+//    	if (!userRepository.existsById(userId)) {
+//    	        Map<String, String> response = new HashMap<>();
+//    	        response.put("error", "User does not exist");
+//    	        return ResponseEntity.badRequest().body(response);
+//    	    }
+//        List<String> imageUrls = new ArrayList<>();
+//        for (MultipartFile file : imageFiles) {
+//            String imageUrl = imageUploadService.uploadImage(file);  // Actual Cloudinary upload
+//            imageUrls.add(imageUrl);
+//        }
+//
+//        SnapSafari post = new SnapSafari();
+//        post.setUserId(userId);
+//        post.setDestination(destination);
+//        post.setTitle(title);
+//        post.setCaption(caption);
+//        post.setImages(imageUrls);
+//        post.setLikes(0);
+//        post.setCreatedAt(LocalDateTime.now());
+//        post.setComments(new ArrayList<>());
+//
+////        return ResponseEntity.ok(snapSafariRepository.save(post));
+//        return ResponseEntity.ok().body(snapSafariRepository.save(post));
     }
 
     // Get all posts

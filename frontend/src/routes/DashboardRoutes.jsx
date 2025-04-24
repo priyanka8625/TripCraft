@@ -8,6 +8,7 @@ import PlanMethodSelection from '../pages/Dashboard/PlanItinerary/PlanMethodSele
 import GenItineraryJSX from '../GenItineraryJSX/GenItineraryJSX';
 import AIChatBot from "../components/AiChatBot/AIChatBot";
 import Trips from '../pages/Dashboard/Trips';
+import SnapSafariRoutes from './SnapSafariRoutes';
 function DashboardRoutes() {
   return (
     <Routes>
@@ -20,6 +21,9 @@ function DashboardRoutes() {
         <Route path="trips" element={<Trips />} />
         <Route path="plan/manual/generate" element={<GenItineraryJSX />} />
         <Route path='ai-assistant' element={<AIChatBot />} />
+        <Route path='snap-safari/*' element={<SnapSafariRoutes/>} />
+        {/* <Route path='snap-safari/profile' element={<Profile />} /> */}
+        
       </Route>
     </Routes>
   );
