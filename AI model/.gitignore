@@ -1,1 +1,6 @@
--e "__pycache__/\n.env\n.vscode/\n*.pyc\n*.log\nvenv/" 
+__pycache__
+.env
+.vscode
+*.pyc
+*.log
+venv 
