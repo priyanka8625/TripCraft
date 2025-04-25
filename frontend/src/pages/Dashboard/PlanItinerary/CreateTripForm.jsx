@@ -160,7 +160,7 @@ function App() {
           const response = await createManualTrip(tripData); // Call the new service method
           console.log("before");
           console.log('Recommended Spots:', response.spots); // Log the spots to the console
-          navigate('/dashboard/plan/manual/generate', { state: { tripData, spots:response.spots } });
+          navigate('/dashboard/plan/manual/generate', { state: { tripId: response.tripId, tripData, spots:response.spots } });
         }
       } catch (error) {
         setApiError(error.response?.data?.message || 'Failed to create trip');
@@ -311,7 +311,7 @@ function App() {
                   onChange={handleInputChange}
                   min="0"
                   className="mt-1 block w-full rounded-xl border border-gray-300 px-4 py-3 transition-all duration-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none"
-                  placeholder="Enter budget"
+                  placeholder="Enter budget (per person)"
                 />
                 {errors.budget && (
                   <p className="text-red-500 text-sm mt-1">{errors.budget}</p>
