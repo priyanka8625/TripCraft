@@ -130,16 +130,16 @@ public class TripController {
     @PostMapping("/create")
     public ResponseEntity<?> createTrip(@RequestBody Trip trip) {
 
-    	String userEmail = getCurrentUserId(); // Returns email, e.g., "test@example.com"
-        Optional<User> userOptional = userRepository.findByEmail(userEmail);
-        if (!userOptional.isPresent()) {
-            Map<String, String> response = new HashMap<>();
-            response.put("error", "User does not exist");
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        User user = userOptional.get();
-        String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
+    	String userId = getCurrentUserId(); // Returns email, e.g., "test@example.com"
+//        Optional<User> userOptional = userRepository.findByEmail(userEmail);
+//        if (!userOptional.isPresent()) {
+//            Map<String, String> response = new HashMap<>();
+//            response.put("error", "User does not exist");
+//            return ResponseEntity.badRequest().body(response);
+//        }
+//
+//        User user = userOptional.get();
+//        String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
 
         // Step 1: Populate non-input fields
         trip.setUserId(userId);
