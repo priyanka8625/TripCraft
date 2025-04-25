@@ -5,7 +5,7 @@ const BlogPostList = () => {
   const posts = [
     {
       id: 1,
-      image: './bbg1.jpg', // Placeholder image
+      image: './img/bbg1.jpg', // Placeholder image
       date: 'Mar 22, 2023',
       readTime: '1 min read',
       title: 'My Top 5 Movies of All Times',
@@ -14,7 +14,7 @@ const BlogPostList = () => {
     },
     {
       id: 2,
-      image: './bbg2.jpg', // Placeholder image
+      image: './img/bbg2.jpg', // Placeholder image
       date: 'Mar 22, 2023',
       readTime: '2 min read',
       title: 'New Movies to Stream from Home This Week',

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -46,7 +47,7 @@ public class ItineraryController {
         // Check if the Trip exists
         Optional<Trip> trip = tripRepository.findById(itinerary.getTripId());
         if (trip.isEmpty()) {
-            return ResponseEntity.badRequest().body("Trip ID not found!");
+            return ResponseEntity.badRequest().body(Map.of("message","Trip ID not found!"));
         }
 
         Itinerary savedItinerary = itineraryRepository.save(itinerary);

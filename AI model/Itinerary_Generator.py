@@ -8,10 +8,17 @@ from Similarity_Algorithm import find_similar_activities, compute_similarity, al
 import time
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import os
+from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags, fetch_low_cost_activities
+import time
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
+# Valid time slots (kept for output but not constrained)
 # Valid time slots (kept for output but not constrained)
 valid_time_slots = ["morning", "afternoon", "evening", "daytime"]
 
+# Feature order for model
 # Feature order for model
 FEATURE_ORDER = [
     "similarity_score",
@@ -29,6 +36,8 @@ def generate_training_data():
     data = []
     max_cost = 1000
     max_budget = 1000
+    max_cost = 1000
+    max_budget = 1000
     max_duration = 8
     for _ in range(10000):
         tags = np.random.choice(all_possible_tags, size=np.random.randint(1, 3), replace=False)
@@ -39,6 +48,7 @@ def generate_training_data():
         budget_per_person_per_day = np.random.uniform(50, max_budget)
         duration = np.random.uniform(1, max_duration)
         sim_score = compute_similarity(user_prefs, tags)
+        score = 0.9 if sim_score > 0.5 and cost < budget_per_person_per_day and 2 <= duration <= 8 else 0.2
         score = 0.9 if sim_score > 0.5 and cost < budget_per_person_per_day and 2 <= duration <= 8 else 0.2
         record = {
             "similarity_score": sim_score,
@@ -54,15 +64,32 @@ def generate_training_data():
     return pd.DataFrame(data)
 
 
+    return pd.DataFrame(data)
+
+
 def preprocess_activities(activities, budget_per_person_per_day):
     data = []
+    max_cost = 1000
+    max_budget = 1000
     max_cost = 1000
     max_budget = 1000
     max_duration = 8
     for activity in activities:
         time_slot = activity["activity"]["timeSlot"].lower() if "activity" in activity and "timeSlot" in activity["activity"] else "daytime"
+        time_slot = activity["activity"]["timeSlot"].lower() if "activity" in activity and "timeSlot" in activity["activity"] else "daytime"
         if time_slot not in valid_time_slots:
             time_slot = "daytime"
+        cost = activity["activity"]["estimatedCost"] if "activity" in activity and "estimatedCost" in activity["activity"] else 10.0
+        if not isinstance(cost, (int, float)):
+            print(f"Invalid estimatedCost for {activity.get('activity', {}).get('name', 'Unknown')}: {cost}, Type: {type(cost)}. Converting to float.")
+            try:
+                cost = float(cost)
+            except (ValueError, TypeError):
+                cost = 10.0
+        activity["activity"]["estimatedCost"] = cost
+        if "duration" not in activity:
+            activity["duration"] = 2  
+        duration = activity["duration"]
         cost = activity["activity"]["estimatedCost"] if "activity" in activity and "estimatedCost" in activity["activity"] else 10.0
         if not isinstance(cost, (int, float)):
             print(f"Invalid estimatedCost for {activity.get('activity', {}).get('name', 'Unknown')}: {cost}, Type: {type(cost)}. Converting to float.")
@@ -78,12 +105,17 @@ def preprocess_activities(activities, budget_per_person_per_day):
             "similarity_score": activity.get("similarity_score", 0.0),
             "rating_normalized": activity.get("rating", 0.0) / 5,
             "estimatedCost_normalized": cost / max_cost,
+            "similarity_score": activity.get("similarity_score", 0.0),
+            "rating_normalized": activity.get("rating", 0.0) / 5,
+            "estimatedCost_normalized": cost / max_cost,
             "budget_per_person_per_day_normalized": budget_per_person_per_day / max_budget,
+            "duration_normalized": duration / max_duration
             "duration_normalized": duration / max_duration
         }
         for ts in valid_time_slots:
             record[f"timeSlot_{ts}"] = 1 if ts == time_slot else 0
         data.append(record)
+    df = pd.DataFrame(data)[FEATURE_ORDER]
     df = pd.DataFrame(data)[FEATURE_ORDER]
     return df
 
@@ -97,7 +129,23 @@ def generate_itinerary(user_input):
         
         start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
         end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
+        start_time = time.time()
+        required_fields = ["startDate", "endDate", "people", "budget", "destination"]
+        for field in required_fields:
+            if field not in user_input:
+                raise ValueError(f"Missing required field: {field}")
+        
+        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
+        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
         people = user_input["people"]
+        print(f"Before validation - People: {people}, Type: {type(people)}")
+        if not isinstance(people, int) or people < 1:
+            try:
+                people = int(people)
+                if people < 1:
+                    raise ValueError
+            except (ValueError, TypeError):
+                raise ValueError("Invalid 'people' value; must be a positive integer")
         print(f"Before validation - People: {people}, Type: {type(people)}")
         if not isinstance(people, int) or people < 1:
             try:
