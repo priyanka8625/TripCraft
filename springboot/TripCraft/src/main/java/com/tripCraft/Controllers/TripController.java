@@ -260,13 +260,34 @@ public class TripController {
 
             // Step 4: Call appropriate service
             if (!destinationExists) {
-                List<Destination.Spot> spots = (List<Spot>) geminiController.generateDestinationData(trip.getDestination());
+            	// Call Gemini Controller
+            	ResponseEntity<?> responseEntity = geminiController.generateDestinationData(trip.getDestination());
 
-                Destination newDestination = new Destination();
-                newDestination.setDestination(trip.getDestination());
-                newDestination.setSpots(spots);
-                destinationRepository.save(newDestination);
-                System.out.println(spots);
+            	if (responseEntity.getStatusCode().is2xxSuccessful()) {
+            	    ObjectMapper mapper = new ObjectMapper();
+            	    JsonNode rootNode = mapper.readTree(responseEntity.getBody().toString());
+
+            	    // Parse spots
+            	    JsonNode spotsNode = rootNode.get("spots");
+            	    List<Destination.Spot> spots = mapper.readerForListOf(Destination.Spot.class).readValue(spotsNode);
+
+            	    // Parse hotels
+            	    JsonNode hotelsNode = rootNode.get("hotels");
+            	    List<Destination.Hotel> hotels = mapper.readerForListOf(Destination.Hotel.class).readValue(hotelsNode);
+
+            	    // Save destination
+            	    Destination newDestination = new Destination();
+            	    newDestination.setDestination(trip.getDestination());
+            	    newDestination.setSpots(spots);
+            	    newDestination.setHotels(hotels); // assuming you added setHotels()
+            	    destinationRepository.save(newDestination);
+
+            	    System.out.println("Spots: " + spots);
+            	    System.out.println("Hotels: " + hotels);
+            	} else {
+            	    System.out.println("Error fetching data from Gemini: " + responseEntity.getBody());
+            	}
+
             }
 
             // Step 5: Save Trip first to get its ID
