@@ -24,40 +24,48 @@ def haversine(lon1, lat1, lon2, lat2):
     c = 2 * atan2(sqrt(a), sqrt(1-a))
     return R * c
 
-def fetch_distance_matrix(locations, use_haversine=False, cache_file="distance_matrix.pkl", max_retries=3, timeout=10):
+def fetch_distance_matrix(locations, mode='motorcycle', use_haversine=False, cache_file="distance_matrix.pkl", max_retries=3, timeout=10):
     """
-    Fetch distance matrix using Haversine formula or Geoapify API.
+    Fetch distance and time matrices using Haversine formula or Geoapify API.
     
     Args:
         locations: List of tuples [(lon1, lat1), (lon2, lat2), ...]
+        mode: Mode of transport ('bicycle', 'drive', etc.)
         use_haversine: If True, use Haversine formula; else use Geoapify
-        cache_file: File to save/load distance matrix (Geoapify only)
+        cache_file: File to save/load matrices (Geoapify only)
         max_retries: Number of retries for failed API calls
         timeout: Timeout for API requests in seconds
     
     Returns:
-        np.array: Distance matrix in kilometers
+        tuple: (distance_matrix, time_matrix) in kilometers and hours
     """
     n = len(locations)
     distance_matrix = np.full((n, n), float('inf'))
+    time_matrix = np.full((n, n), float('inf'))
     np.fill_diagonal(distance_matrix, 0)
+    np.fill_diagonal(time_matrix, 0)
 
     if use_haversine:
-        print("Calculating distance matrix using Haversine formula...")
+        print("Calculating distance and time matrices using Haversine formula...")
+        AVERAGE_SPEED = 20 if mode == 'bicycle' else 40  # km/h
         for i in range(n):
             for j in range(i + 1, n):
                 lon1, lat1 = locations[i]
                 lon2, lat2 = locations[j]
                 distance_km = haversine(lon1, lat1, lon2, lat2)
+                time_hours = distance_km / AVERAGE_SPEED
                 distance_matrix[i][j] = distance_km
                 distance_matrix[j][i] = distance_km
-        return distance_matrix
+                time_matrix[i][j] = time_hours
+                time_matrix[j][i] = time_hours
+        return distance_matrix, time_matrix
 
     # Geoapify API
     if os.path.exists(cache_file):
-        print(f"Loading distance matrix from {cache_file}...")
+        print(f"Loading distance and time matrices from {cache_file}...")
         with open(cache_file, 'rb') as f:
-            return pickle.load(f)
+            distance_matrix, time_matrix = pickle.load(f)
+        return distance_matrix, time_matrix
 
     coords = [{"lat": lat, "lon": lon} for lon, lat in locations]
     for i in range(n):
@@ -67,7 +75,7 @@ def fetch_distance_matrix(locations, use_haversine=False, cache_file="distance_m
             url = (
                 f"https://api.geoapify.com/v1/routing?"
                 f"waypoints={start['lat']},{start['lon']}|{end['lat']},{end['lon']}"
-                f"&mode=drive&apiKey={GEOAPIFY_API_KEY}"
+                f"&mode={mode}&apiKey={GEOAPIFY_API_KEY}"
             )
             for attempt in range(max_retries):
                 try:
@@ -77,9 +85,14 @@ def fetch_distance_matrix(locations, use_haversine=False, cache_file="distance_m
                         break
                     data = response.json()
                     route = data['features'][0]['properties']
-                    distance_km = route['distance'] / 1000
+                    distance_m = route['distance']
+                    time_s = route['time']
+                    distance_km = distance_m / 1000
+                    time_hours = time_s / 3600
                     distance_matrix[i][j] = distance_km
                     distance_matrix[j][i] = distance_km
+                    time_matrix[i][j] = time_hours
+                    time_matrix[j][i] = time_hours
                     break
                 except Exception as e:
                     print(f"Attempt {attempt + 1}/{max_retries} failed for {start} to {end}: {e}")
@@ -87,11 +100,11 @@ def fetch_distance_matrix(locations, use_haversine=False, cache_file="distance_m
                         print(f"Max retries reached for {start} to {end}")
                     time.sleep(1)
 
-    print(f"Saving distance matrix to {cache_file}...")
+    print(f"Saving distance and time matrices to {cache_file}...")
     with open(cache_file, 'wb') as f:
-        pickle.dump(distance_matrix, f)
+        pickle.dump((distance_matrix, time_matrix), f)
 
-    return distance_matrix
+    return distance_matrix, time_matrix
 
 def cluster_locations(distance_matrix, eps_km=15, min_samples=2):
     """
