@@ -4,7 +4,6 @@ import Navbar from './components/Navbar';
 import Home from './components/Home';
 import ServiceSection from './components/ServiceSection';
 import Reviews from './components/Reviews';
-import BlogPostList from './components/BlogPostCard';
 import Footer from './components/Footer';
 import { Toaster } from 'react-hot-toast';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -24,7 +23,6 @@ function App() {
               <Home />
               <ServiceSection />
               <Reviews />
-              <BlogPostList />
               <Footer />
             </>
           } />
