@@ -135,8 +135,14 @@ public class SnapSafariController {
         }
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<SnapSafari>> getPostsByUserId(@PathVariable String userId) {
+    @GetMapping("/user")
+    public ResponseEntity<List<SnapSafari>> getPostsByUserId() {
+    	String userEmail = tripController.getCurrentUserId(); // Returns email, e.g., "test@example.com"
+        Optional<User> userOptional = userRepository.findByEmail(userEmail);
+        
+        User user = userOptional.get();
+        String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
+        
         List<SnapSafari> posts = snapSafariRepository.findByUserId(userId);
         
         if (posts.isEmpty()) {
@@ -161,10 +167,15 @@ public class SnapSafariController {
     // Comment on a post
     @PostMapping("/{postId}/comment")
     public ResponseEntity<?> addComment(@PathVariable String postId,
-                                        @RequestParam("comment") String commentText,
-                                        @RequestParam("username") String userId) {
+                                        @RequestParam("comment") String commentText) {
         Optional<SnapSafari> optionalPost = snapSafariRepository.findById(postId);
-
+        
+        String userEmail = tripController.getCurrentUserId(); // Returns email, e.g., "test@example.com"
+        Optional<User> userOptional = userRepository.findByEmail(userEmail);
+        
+        User user = userOptional.get();
+        String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
+        
         if (optionalPost.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "Post not found"));
@@ -172,10 +183,14 @@ public class SnapSafariController {
 
         SnapSafari post = optionalPost.get();
 
-        Comment comment = new Comment(userId, commentText);
+        // Initialize comments list if null
+        if (post.getComments() == null) {
+            post.setComments(new ArrayList<>());
+        }
+
+        Comment comment = new Comment(userId, commentText); // Include username
         post.getComments().add(comment);
         snapSafariRepository.save(post);
-
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);
     }
 

@@ -3,8 +3,7 @@ import { FaHeart, FaRegHeart, FaComment, FaTimes, FaHome, FaUser, FaPlus } from 
 import { motion, AnimatePresence } from 'framer-motion';
 import Profile from './Profile';
 import ImageUpload from './ImageUpload';
-import { Route, Routes } from 'react-router-dom';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { addComment, getAllPosts, getPostsByUserId, likePost, uploadPost } from '../../../services/snapSafariService';
 
 function Feed() {
@@ -12,75 +11,26 @@ function Feed() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [userPosts, setUserPosts] = useState([]);
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      userId: 'adventure_seeker',
-      userAvatar: 'https://i.pravatar.cc/150?img=1',
-      image: './img/bg1.jpg',
-      caption: 'Exploring the wilderness 🌲',
-      likes: 245,
-      comments: [
-        { id: 1, username: 'traveler', text: 'Amazing view!' },
-        { id: 2, username: 'photographer', text: 'Great composition!' }
-      ]
-    },
-    {
-      id: 2,
-      userId: 'urban_explorer',
-      userAvatar: 'https://i.pravatar.cc/150?img=2',
-      image: './img/bg2.jpg',
-      caption: 'Urban adventures in the city 🌆',
-      likes: 189,
-      comments: [
-        { id: 3, username: 'cityexplorer', text: 'Love the urban vibes!' }
-      ]
-    },
-    {
-      id: 3,
-      userId: 'mountain_climber',
-      userAvatar: 'https://i.pravatar.cc/150?img=3',
-      image: './img/bg3.jpg',
-      caption: 'Mountain peaks 🏔',
-      likes: 320,
-      comments: []
-    },
-    {
-      id: 4,
-      userId: 'sunset_chaser',
-      userAvatar: 'https://i.pravatar.cc/150?img=4',
-      image: './img/bg4.jpg',
-      caption: 'Sunset vibes 🌅',
-      likes: 278,
-      comments: []
-    },
-    {
-      id: 5,
-      userId: 'beach_lover',
-      userAvatar: 'https://i.pravatar.cc/150?img=5',
-      image: './img/bbg1.jpg',
-      caption: 'Beach paradise 🏖',
-      likes: 412,
-      comments: []
-    }
-  ]);
-
+  const [posts, setPosts] = useState([]); // Start with an empty array since we fetch from backend
   const [newComments, setNewComments] = useState({});
   const [likes, setLikes] = useState({});
 
   const navigate = useNavigate();
-  const location = useLocation(); // Get the current location
+  const location = useLocation();
 
-   // Fetch all posts on component mount
-   useEffect(() => {
+  // Fetch all posts on component mount
+  useEffect(() => {
     const fetchPosts = async () => {
       try {
         const fetchedPosts = await getAllPosts();
         setPosts(fetchedPosts.map(post => ({
           ...post,
-          image: post.images[0] || '', // Use the first image
-          userAvatar: post.userAvatar || 'https://i.pravatar.cc/150?img=8' // Fallback avatar
+          image: post.images && post.images.length > 0 ? post.images[0] : '', // Safely access images
+          userAvatar: post.userAvatar || 'https://i.pravatar.cc/150?img=8', // Fallback avatar
+          comments: post.comments || [], // Ensure comments is an array
         })));
+        console.log(fetchedPosts);
+        
       } catch (error) {
         console.error('Error fetching posts:', error);
       }
@@ -93,9 +43,13 @@ function Feed() {
   useEffect(() => {
     const fetchUserPosts = async () => {
       try {
-        // const userId = 'current_user'; // Replace with actual user ID from auth context
         const fetchedUserPosts = await getPostsByUserId();
-        setUserPosts(fetchedUserPosts);
+        setUserPosts(fetchedUserPosts.map(post => ({
+          ...post,
+          image: post.images && post.images.length > 0 ? post.images[0] : '', // Map image for Profile.jsx
+          userAvatar: post.userAvatar || 'https://i.pravatar.cc/150?img=8', // Fallback avatar
+          comments: post.comments || [], // Ensure comments is an array
+        })));
       } catch (error) {
         console.error('Error fetching user posts:', error);
       }
@@ -107,36 +61,59 @@ function Feed() {
   const handleLike = (postId) => {
     setLikes(prev => ({
       ...prev,
-      [postId]: !prev[postId]
+      [postId]: !prev[postId],
     }));
     likePost(postId)
       .then(updatedPost => {
         setPosts(prevPosts =>
           prevPosts.map(post =>
-            post.id === postId ? { ...post, likes: updatedPost.likes } : post
+            post.id === postId ? { ...post, likes: updatedPost.likes || 0 } : post
+          )
+        );
+        setUserPosts(prevUserPosts =>
+          prevUserPosts.map(post =>
+            post.id === postId ? { ...post, likes: updatedPost.likes || 0 } : post
           )
         );
       })
       .catch(error => console.error('Error liking post:', error));
   };
+
   const handleComment = (postId, e) => {
     e.preventDefault();
+    console.log('Form submitted for post:', postId);
     if (newComments[postId]?.trim()) {
       const commentText = newComments[postId];
-      const username = 'current_user'; // Replace with actual username from auth context
-      addComment(postId, commentText, username)
+      console.log('Comment data:', { postId, commentText });
+      addComment(postId, commentText)
         .then(newComment => {
-          setPosts(prevPosts =>
-            prevPosts.map(post =>
-              post.id === postId
-                ? { ...post, comments: [...post.comments, newComment] }
-                : post
-            )
-          );
-          setNewComments(prev => ({
-            ...prev,
-            [postId]: ''
-          }));
+          console.log('New comment added:', newComment);
+          // Update posts state
+        setPosts(prevPosts =>
+          prevPosts.map(post =>
+            post.id === postId
+              ? { ...post, comments: [...(post.comments || []), newComment] }
+              : post
+          )
+        );
+        // Update userPosts state
+        setUserPosts(prevUserPosts =>
+          prevUserPosts.map(post =>
+            post.id === postId
+              ? { ...post, comments: [...(post.comments || []), newComment] }
+              : post
+          )
+        );
+        // Update selectedPost state to reflect the new comment in the modal
+        setSelectedPost(prevSelectedPost => ({
+          ...prevSelectedPost,
+          comments: [...(prevSelectedPost.comments || []), newComment],
+        }));
+        // Clear the comment input
+        setNewComments(prev => ({
+          ...prev,
+          [postId]: '',
+        }));
         })
         .catch(error => console.error('Error adding comment:', error));
     }
@@ -145,28 +122,30 @@ function Feed() {
   const handleAddPost = async (formData) => {
     const { destination, title, caption, images } = formData;
 
-    // Create FormData object for multipart request
     const data = new FormData();
     data.append('destination', destination);
     data.append('title', title);
     data.append('caption', caption);
     images.forEach((image) => {
-      data.append('images', image); // Backend expects 'images' as the field name
+      data.append('images', image);
     });
 
     try {
-      // Upload the post
       await uploadPost(data);
-
-      // Fetch updated posts after successful upload
       const updatedPosts = await getAllPosts();
-      setPosts(updatedPosts);
-
-      // Fetch updated user posts
-      const userId = 'current_user'; // Replace with actual user ID
-      const updatedUserPosts = await getPostsByUserId(userId);
-      setUserPosts(updatedUserPosts);
-
+      setPosts(updatedPosts.map(post => ({
+        ...post,
+        image: post.images && post.images.length > 0 ? post.images[0] : '',
+        userAvatar: post.userAvatar || 'https://i.pravatar.cc/150?img=8',
+        comments: post.comments || [],
+      })));
+      const updatedUserPosts = await getPostsByUserId();
+      setUserPosts(updatedUserPosts.map(post => ({
+        ...post,
+        image: post.images && post.images.length > 0 ? post.images[0] : '',
+        userAvatar: post.userAvatar || 'https://i.pravatar.cc/150?img=8',
+        comments: post.comments || [],
+      })));
       setShowUploadModal(false);
     } catch (error) {
       console.error('Error uploading post:', error);
@@ -176,29 +155,29 @@ function Feed() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="fixed top-64px left-[305px] w-[calc(100%-350px)]  bg-white border-b border-gray-200 z-40">
+      <div className="fixed top-64px left-[305px] w-[calc(100%-350px)] bg-white border-b border-gray-200 z-40">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex justify-between items-center">
           <h1 className="text-gray-900 text-2xl font-bold">Snap Safari</h1>
           <div className="flex items-center space-x-6">
-            <button 
+            <button
               onClick={() => {
-                setView('feed')
-                navigate("/dashboard/snap-safari")
+                setView('feed');
+                navigate('/dashboard/snap-safari');
               }}
               className={`text-gray-600 text-xl hover:text-emerald-500 transition-colors ${view === 'feed' ? 'text-emerald-500' : ''}`}
             >
               <FaHome />
             </button>
-            <button 
+            <button
               onClick={() => {
-                setView('profile')
-                navigate("/dashboard/snap-safari/profile")
+                setView('profile');
+                navigate('/dashboard/snap-safari/profile');
               }}
               className={`text-gray-600 text-xl hover:text-emerald-500 transition-colors ${view === 'profile' ? 'text-emerald-500' : ''}`}
             >
               <FaUser />
             </button>
-            <button 
+            <button
               onClick={() => setShowUploadModal(true)}
               className="text-gray-600 text-xl hover:text-emerald-500 transition-colors"
             >
@@ -214,8 +193,6 @@ function Feed() {
           <Route path="/profile" element={<Profile posts={userPosts} onPostClick={setSelectedPost} onAddPost={handleAddPost} />} />
           <Route path="*" element={<div>No matching route found. Current path: {location.pathname}</div>} />
         </Routes>
-
-        {/* <View posts={posts} setSelectedPost={setSelectedPost} /> */}
       </div>
 
       <AnimatePresence>
@@ -230,31 +207,37 @@ function Feed() {
             <div
               className="bg-white rounded-lg max-w-[80vw] w-full max-h-[80vh] flex overflow-hidden"
               onClick={e => e.stopPropagation()}
-              style={{ height: '80vh' }} // Explicit height for better control
+              style={{ height: '80vh' }}
             >
               <div className="w-[60%]">
-                <img
-                  src={selectedPost.image}
-                  alt={selectedPost.caption}
-                  className="w-full h-full object-contain"
-                />
+                {selectedPost.image ? (
+                  <img
+                    src={selectedPost.image}
+                    alt={selectedPost.caption || 'Post image'}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-500">
+                    No image available
+                  </div>
+                )}
               </div>
               <div className="w-[40%] flex flex-col h-full">
                 <div className="p-4 border-b border-gray-200 flex items-center space-x-3">
                   <img
-                    src={selectedPost.userAvatar}
-                    alt={selectedPost.userId}
+                    src={selectedPost.userAvatar || 'https://i.pravatar.cc/150?img=8'}
+                    alt={selectedPost.userId || 'User'}
                     className="w-8 h-8 rounded-full"
                   />
-                  <span className="text-gray-900 font-semibold">{selectedPost.userId}</span>
+                  <span className="text-gray-900 font-semibold">{selectedPost.userId || 'Unknown'}</span>
                 </div>
                 <div className="p-4 border-b border-gray-200">
-                  <p className="text-gray-900 text-lg">{selectedPost.caption}</p>
+                  <p className="text-gray-900 text-lg">{selectedPost.caption || 'No caption'}</p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(80vh - 180px)' }}>
-                  {selectedPost.comments.map(comment => (
+                  {(selectedPost.comments || []).map(comment => (
                     <div key={comment.id} className="text-gray-900">
-                      <span className="font-bold">{comment.username}</span>: {comment.text}
+                      <span className="font-bold">{comment.userId}</span>: {comment.comment}
                     </div>
                   ))}
                 </div>
@@ -271,17 +254,18 @@ function Feed() {
                       )}
                     </button>
                     <span className="text-gray-900">
-                      {selectedPost.likes + (likes[selectedPost.id] ? 1 : 0)} likes
+                      {(selectedPost.likes || 0) + (likes[selectedPost.id] ? 1 : 0)} likes
                     </span>
                   </div>
-                  <form onSubmit={(e) => handleComment(selectedPost.id, e)}>
+                  <form onSubmit={(e) => handleComment(selectedPost.id,
+                     e)}>
                     <input
                       type="text"
                       value={newComments[selectedPost.id] || ''}
                       onChange={(e) =>
                         setNewComments(prev => ({
                           ...prev,
-                          [selectedPost.id]: e.target.value
+                          [selectedPost.id]: e.target.value,
                         }))
                       }
                       placeholder="Add a comment..."
@@ -332,38 +316,42 @@ function Feed() {
   );
 }
 
-function View ({ posts, setSelectedPost }) {
+function View({ posts, setSelectedPost }) {
   return (
     <div className="mt-64px grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                className="aspect-square cursor-pointer relative group"
-                onClick={() => setSelectedPost(post)}
-              >
-                <img
-                  src={post.image}
-                  alt={post.caption}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="text-white flex items-center space-x-6">
-                    <div className="flex items-center space-x-2">
-                      <FaHeart />
-                      <span>{post?.likes}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <FaComment />
-                      <span>{post?.comments?.length}</span>
-                    </div>
-                  </div>
-                </div>
+      {posts.map((post) => (
+        <div
+          key={post.id}
+          className="aspect-square cursor-pointer relative group"
+          onClick={() => setSelectedPost(post)}
+        >
+          {post.image ? (
+            <img
+              src={post.image}
+              alt={post.caption || 'Post image'}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
+              No image
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/50 bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+            <div className="text-white flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <FaHeart />
+                <span>{post.likes || 0}</span>
               </div>
-            ))}
+              <div className="flex items-center space-x-2">
+                <FaComment />
+                <span>{(post.comments || []).length}</span>
+              </div>
+            </div>
           </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
 export default Feed;
-
-

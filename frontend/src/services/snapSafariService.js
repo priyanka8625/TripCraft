@@ -56,18 +56,24 @@ export const likePost = async (postId) => {
 };
 
 // Add a comment to a post
-export const addComment = async (postId, commentText, username) => {
-  try {
-    const response = await api.post(`/snap-safari/${postId}/comment`, null, {
-      params: {
-        comment: commentText,
-        username: username,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { error: 'Failed to add comment' };
-  }
+export const addComment = async (postId, commentText) => {
+    try {
+        console.log('Sending comment request:', { postId, comment: commentText });
+        const response = await api.post(
+          `/snap-safari/${postId}/comment`,
+          {}, // Empty body for POST request
+          {
+            params: {
+              comment: commentText, // Send comment as a query parameter
+            },
+          }
+        );
+        console.log('addComment response:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error('Error adding comment:', error.response?.data, error.response?.status, error.message);
+        throw error.response?.data || { error: 'Failed to add comment' };
+      }
 };
 
 // Delete a post

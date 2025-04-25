@@ -36,7 +36,7 @@ function Profile({ posts, onPostClick, onAddPost }) {
               <div className="flex space-x-6 mt-4 text-gray-600">
                 <div>
                   <span className="font-bold text-gray-900">
-                    {posts.length}
+                    {posts?.length}
                   </span>{" "}
                   posts
                 </div>
@@ -69,11 +69,11 @@ function Profile({ posts, onPostClick, onAddPost }) {
                 <div className="text-white flex items-center space-x-6">
                   <div className="flex items-center space-x-2">
                     <FaHeart />
-                    <span>{post.likes}</span>
+                    <span>{post?.likes}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <FaComment />
-                    <span>{post.comments.length}</span>
+                    <span>{post?.comments?.length}</span>
                   </div>
                 </div>
               </div>
