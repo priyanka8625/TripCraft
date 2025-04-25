@@ -1,366 +1,653 @@
-import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
+import pandas as pd
 from datetime import datetime, timedelta
-import joblib
-import os
-from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags, fetch_low_cost_activities
+from sklearn.cluster import DBSCAN
+from sklearn.ensemble import RandomForestRegressor
 import time
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import os
-from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags, fetch_low_cost_activities
-import time
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from Similarity_Algorithm import find_similar_activities, fetch_low_cost_activities
 
-# Valid time slots (kept for output but not constrained)
-# Valid time slots (kept for output but not constrained)
-valid_time_slots = ["morning", "afternoon", "evening", "daytime"]
+AVERAGE_SPEED = 40
+TAXI_RATE = 8  # Further reduced to lower travel costs
+MINIMUM_BUDGET = 20
+MAX_HOURS_PER_DAY = 14
 
-# Feature order for model
-# Feature order for model
-FEATURE_ORDER = [
-    "similarity_score",
-    "rating_normalized",
-    "estimatedCost_normalized",
-    "budget_per_person_per_day_normalized",
-    "duration_normalized",
-    "timeSlot_morning",
-    "timeSlot_afternoon",
-    "timeSlot_evening",
-    "timeSlot_daytime"
-]
+def haversine(lon1, lat1, lon2, lat2):
+    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    r = 6371
+    return c * r
+
+def fetch_distance_matrix(locations, use_haversine=True):
+    n = len(locations)
+    distance_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i + 1, n):
+            distance = haversine(locations[i][0], locations[i][1], locations[j][0], locations[j][1])
+            distance_matrix[i][j] = distance
+            distance_matrix[j][i] = distance
+    return distance_matrix
+
+def cluster_locations(distance_matrix, eps_km=20, min_samples=2):  # Increased eps_km
+    clustering = DBSCAN(eps=eps_km, min_samples=min_samples, metric='precomputed').fit(distance_matrix)
+    return clustering.labels_
+
+def format_duration(estimated_time):
+    if estimated_time >= 1:
+        return round(estimated_time, 1), "hours"
+    return round(estimated_time * 60), "minutes"
+
+def normalize_name(name):
+    if isinstance(name, np.ndarray):
+        raise ValueError(f"normalize_name received NumPy array: {name}")
+    name = str(name)
+    print(f"normalize_name: '{name}', type: {type(name)}")
+    normalized = name.replace("  ", " ").strip().lower()
+    return normalized
+
+def preprocess_activities(activities, budget_per_person_per_day):
+    print("preprocess_activities: Starting")
+    X = []
+    max_cost = max((float(activity["activity"]["estimatedCost"]) for activity in activities), default=1000)
+    max_budget = min(max(float(budget_per_person_per_day), 1000), 10000)
+    max_duration = 8
+    
+    for activity in activities:
+        name = str(activity["activity"]["name"])
+        print(f"preprocess_activities: Processing '{name}', type: {type(name)}")
+        cost = float(activity["activity"]["estimatedCost"])
+        rating = float(activity["rating"])
+        duration = float(activity["duration"])
+        similarity_score = float(activity["similarity_score"])
+        X.append([
+            similarity_score,
+            rating / 5.0,
+            min(cost / max_cost, 1.0),
+            min(budget_per_person_per_day / max_budget, 1.0),
+            duration / max_duration
+        ])
+    return np.array(X, dtype=float)
 
 def generate_training_data():
     data = []
+    all_possible_tags = ["history", "nature", "culture", "spiritual", "relaxation", "adventure", "food", "shopping", "art", "nightlife"]
     max_cost = 1000
-    max_budget = 1000
-    max_cost = 1000
-    max_budget = 1000
+    max_budget = 10000
     max_duration = 8
     for _ in range(10000):
-        tags = np.random.choice(all_possible_tags, size=np.random.randint(1, 3), replace=False)
-        user_prefs = np.random.choice(all_possible_tags, size=np.random.randint(1, 3), replace=False)
+        tags = np.random.choice(all_possible_tags, size=np.random.randint(1, 4), replace=False).tolist()
+        user_prefs = np.random.choice(all_possible_tags, size=np.random.randint(1, 3), replace=False).tolist()
         cost = np.random.uniform(10, max_cost)
         rating = np.random.uniform(1, 5)
-        time_slot = np.random.choice(valid_time_slots)
         budget_per_person_per_day = np.random.uniform(50, max_budget)
         duration = np.random.uniform(1, max_duration)
-        sim_score = compute_similarity(user_prefs, tags)
-        score = 0.9 if sim_score > 0.5 and cost < budget_per_person_per_day and 2 <= duration <= 8 else 0.2
-        score = 0.9 if sim_score > 0.5 and cost < budget_per_person_per_day and 2 <= duration <= 8 else 0.2
-        record = {
+        sim_score = sum(1 for tag in tags if tag in user_prefs) / len(set(tags + user_prefs))
+        score = (0.4 * sim_score + 0.3 * (rating / 5) + 0.2 * (1 - cost / budget_per_person_per_day) +
+                 0.1 * (1 - abs(duration - 4) / 4)) * 0.9 + 0.1
+        data.append({
             "similarity_score": sim_score,
             "rating_normalized": rating / 5,
             "estimatedCost_normalized": cost / max_cost,
             "budget_per_person_per_day_normalized": budget_per_person_per_day / max_budget,
             "duration_normalized": duration / max_duration,
             "relevance_score": score
-        }
-        for ts in valid_time_slots:
-            record[f"timeSlot_{ts}"] = 1 if ts == time_slot else 0
-        data.append(record)
+        })
     return pd.DataFrame(data)
 
+def train_model():
+    df = generate_training_data()
+    X = df[["similarity_score", "rating_normalized", "estimatedCost_normalized",
+            "budget_per_person_per_day_normalized", "duration_normalized"]]
+    y = df["relevance_score"]
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+    return model
 
-    return pd.DataFrame(data)
+def assign_time_slot(current_time, duration):
+    start_time = current_time
+    end_time = start_time + timedelta(hours=duration)
+    return start_time.strftime("%H:%M"), end_time.strftime("%H:%M")
 
-
-def preprocess_activities(activities, budget_per_person_per_day):
-    data = []
-    max_cost = 1000
-    max_budget = 1000
-    max_cost = 1000
-    max_budget = 1000
-    max_duration = 8
-    for activity in activities:
-        time_slot = activity["activity"]["timeSlot"].lower() if "activity" in activity and "timeSlot" in activity["activity"] else "daytime"
-        time_slot = activity["activity"]["timeSlot"].lower() if "activity" in activity and "timeSlot" in activity["activity"] else "daytime"
-        if time_slot not in valid_time_slots:
-            time_slot = "daytime"
-        cost = activity["activity"]["estimatedCost"] if "activity" in activity and "estimatedCost" in activity["activity"] else 10.0
-        if not isinstance(cost, (int, float)):
-            print(f"Invalid estimatedCost for {activity.get('activity', {}).get('name', 'Unknown')}: {cost}, Type: {type(cost)}. Converting to float.")
-            try:
-                cost = float(cost)
-            except (ValueError, TypeError):
-                cost = 10.0
-        activity["activity"]["estimatedCost"] = cost
-        if "duration" not in activity:
-            activity["duration"] = 2  
-        duration = activity["duration"]
-        cost = activity["activity"]["estimatedCost"] if "activity" in activity and "estimatedCost" in activity["activity"] else 10.0
-        if not isinstance(cost, (int, float)):
-            print(f"Invalid estimatedCost for {activity.get('activity', {}).get('name', 'Unknown')}: {cost}, Type: {type(cost)}. Converting to float.")
-            try:
-                cost = float(cost)
-            except (ValueError, TypeError):
-                cost = 10.0
-        activity["activity"]["estimatedCost"] = cost
-        if "duration" not in activity:
-            activity["duration"] = 2  
-        duration = activity["duration"]
-        record = {
-            "similarity_score": activity.get("similarity_score", 0.0),
-            "rating_normalized": activity.get("rating", 0.0) / 5,
-            "estimatedCost_normalized": cost / max_cost,
-            "similarity_score": activity.get("similarity_score", 0.0),
-            "rating_normalized": activity.get("rating", 0.0) / 5,
-            "estimatedCost_normalized": cost / max_cost,
-            "budget_per_person_per_day_normalized": budget_per_person_per_day / max_budget,
-            "duration_normalized": duration / max_duration
-        }
-        for ts in valid_time_slots:
-            record[f"timeSlot_{ts}"] = 1 if ts == time_slot else 0
-        data.append(record)
-    df = pd.DataFrame(data)[FEATURE_ORDER]
-    df = pd.DataFrame(data)[FEATURE_ORDER]
-    return df
+def convert_to_serializable(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, list):
+        return [convert_to_serializable(item) for item in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_to_serializable(value) for key, value in obj.items()}
+    return obj
 
 def generate_itinerary(user_input):
+    print(f"generate_itinerary: Input: {user_input}")
     try:
-        start_time = time.time()
-        required_fields = ["startDate", "endDate", "people", "budget", "destination"]
-        for field in required_fields:
-            if field not in user_input:
-                raise ValueError(f"Missing required field: {field}")
-        
         start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
         end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
-        start_time = time.time()
-        required_fields = ["startDate", "endDate", "people", "budget", "destination"]
-        for field in required_fields:
-            if field not in user_input:
-                raise ValueError(f"Missing required field: {field}")
-        
-        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
-        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
-        people = user_input["people"]
-        print(f"Before validation - People: {people}, Type: {type(people)}")
-        if not isinstance(people, int) or people < 1:
-            try:
-                people = int(people)
-                if people < 1:
-                    raise ValueError
-            except (ValueError, TypeError):
-                raise ValueError("Invalid 'people' value; must be a positive integer")
-        print(f"Before validation - People: {people}, Type: {type(people)}")
-        if not isinstance(people, int) or people < 1:
-            try:
-                people = int(people)
-                if people < 1:
-                    raise ValueError
-            except (ValueError, TypeError):
-                raise ValueError("Invalid 'people' value; must be a positive integer")
-        budget = user_input["budget"]
-        try:
-            budget = float(budget)
-            if budget < 0:
-                raise ValueError
-        except (ValueError, TypeError):
-            raise ValueError("Invalid 'budget' value; must be a non-negative number")
-        destination = str(user_input["destination"]).strip()
-        if not destination:
-            raise ValueError("Destination cannot be empty")
-        preferences = user_input.get("preferences", [])
-        if not isinstance(preferences, list):
-            raise ValueError("Preferences must be a list")
-        print(f"Validated people: {people}, Type: {type(people)}, Input processing completed in {time.time() - start_time:.2f} seconds")
-    except Exception as e:
-        raise ValueError(f"Invalid user input: {str(e)}")
+        days = (end_date - start_date).days + 1
+        people = int(user_input["people"])
+        budget = float(user_input["budget"])
+        destination = str(user_input["destination"])
+        preferences = [str(p) for p in user_input.get("preferences", [])]
+    except (KeyError, ValueError) as e:
+        raise ValueError(f"Invalid input: {str(e)}")
 
-    days = (end_date - start_date).days + 1
-    if days < 1:
-        raise ValueError("End date must be on or after start date")
+    if days < 1 or people < 1 or budget < MINIMUM_BUDGET:
+        raise ValueError("Invalid days, people, or budget")
 
-    budget_per_person_per_day = budget / people / days
-    print(f"Budget per person per day: {budget_per_person_per_day}")
-
-    try:
-        start_time = time.time()
-        model = joblib.load("activity_scoring_model.pkl")
-        print(f"Model loaded in {time.time() - start_time:.2f} seconds")
-    except FileNotFoundError:
-        print("Training model...")
-        start_time = time.time()
-        model, _ = train_model()
-        print(f"Model trained in {time.time() - start_time:.2f} seconds")
+    MAX_TRAVEL_DISTANCE = 150
+    NOISE_TRAVEL_DISTANCE = 100
+    budget_per_person_per_day = budget / (people * days)
+    model = train_model()
 
     start_time = time.time()
     activities = find_similar_activities(destination, preferences, budget, people, days)
-    print(f"Activities fetched: {len(activities)} in {time.time() - start_time:.2f} seconds")
-    if not activities:
-        raise ValueError("No activities found for the destination")
+    activity_names = []
+    for a in activities:
+        name = str(a["activity"]["name"])
+        activity_names.append(name)
+        print(f"generate_itinerary: Activity: '{name}', type: {type(name)}, tags: {a['activity']['tags']}, cost: {a['activity']['estimatedCost']}")
+    print(f"generate_itinerary: Fetched {len(activities)} activities in {time.time() - start_time:.2f}s: {activity_names}")
 
-    start_time = time.time()
-    X = preprocess_activities(activities, budget_per_person_per_day)
+    if not activities:
+        print("generate_itinerary: No activities found, returning empty itinerary")
+        return {"activities": []}
+
+    valid_activities = []
+    locations = []
+    activity_name_to_index = {}
+    for idx, activity in enumerate(activities):
+        name = str(activity["activity"]["name"])
+        lat = float(activity["activity"].get("latitude", 0))
+        lon = float(activity["activity"].get("longitude", 0))
+        normalized_name = normalize_name(name)
+        if lat != 0 and lon != 0 and normalized_name:
+            valid_activities.append(activity)
+            locations.append((lon, lat))
+            activity_name_to_index[normalized_name] = len(valid_activities) - 1
+            activity["score"] = 0.0
+            activity["activity"]["name"] = name
+            tags = activity["activity"]["tags"]
+            if isinstance(tags, np.ndarray):
+                tags = tags.tolist()
+            activity["activity"]["tags"] = [str(tag) for tag in tags]
+            print(f"generate_itinerary: Valid activity: '{name}', normalized: '{normalized_name}', type: {type(name)}")
+        else:
+            print(f"generate_itinerary: Skipping activity '{name}' (invalid lat: {lat}, lon: {lon} or name)")
+
+    if not valid_activities:
+        print("generate_itinerary: No valid activities with location data, returning empty itinerary")
+        return {"activities": []}
+
+    distance_matrix = fetch_distance_matrix(locations, use_haversine=True)
+    clusters = cluster_locations(distance_matrix, eps_km=20, min_samples=2)
+    cluster_dict = {}
+    noise_activities = []
+    for idx, cluster_id in enumerate(clusters):
+        if cluster_id == -1:
+            noise_activities.append(valid_activities[idx])
+        else:
+            if cluster_id not in cluster_dict:
+                cluster_dict[cluster_id] = []
+            cluster_dict[cluster_id].append(valid_activities[idx])
+    print(f"generate_itinerary: Clusters: {len(cluster_dict)}, Noise activities: {len(noise_activities)}")
+
+    X = preprocess_activities(valid_activities, budget_per_person_per_day)
     scores = model.predict(X)
-    for i, activity in enumerate(activities):
-        activity["score"] = scores[i]
-        print(f"Scored activity: {activity['activity']['name']}, Score: {scores[i]:.3f}, Similarity: {activity['similarity_score']:.3f}")
-    activities.sort(key=lambda x: x["score"], reverse=True)
-    print(f"Activities scored in {time.time() - start_time:.2f} seconds")
+    for i, activity in enumerate(valid_activities):
+        activity["score"] = float(scores[i])
 
     itinerary = []
+    used_activities_per_day = {day: set() for day in range(1, days + 1)}
+    total_duration = {day: 0.0 for day in range(1, days + 1)}
+    total_travel_distance = {day: 0.0 for day in range(1, days + 1)}
     remaining_budget = budget
-    total_duration = {i: 0 for i in range(1, days + 1)}
-    used_activities = set()  # Track all used activities across all days
-    used_activities_per_day = {i: set() for i in range(1, days + 1)}  # Track used activities per day
+    cluster_ids = sorted([cid for cid in cluster_dict.keys() if cid != -1])
 
-    # Initial assignment
-    start_time = time.time()
-    activity_index = 0
-    activities_per_day = max(2, min(4, len(activities) // max(1, days)))  # Cap at 4 activities per day
-    print(f"Initial activities per day: {activities_per_day}")
     for day in range(1, days + 1):
-        daily_activities = 0
-        while (daily_activities < activities_per_day and 
-               activity_index < len(activities) and 
-               total_duration[day] < 12 and
-               remaining_budget > 0):
-            activity = activities[activity_index]["activity"]
-            activity_name = activity["name"]
-            cost = activity["estimatedCost"]
-            print(f"Processing activity: {activity['name']}, People: {people}, Type: {type(people)}, estimatedCost: {cost}, Type: {type(cost)}, Remaining budget: {remaining_budget}, Duration so far: {total_duration[day]}")
-            total_cost = cost * people
-            time_slot = activity["timeSlot"].lower()
-            duration = activities[activity_index].get("duration", 2)
+        daily_activities = []
+        cluster_id = cluster_ids[(day - 1) % len(cluster_ids)] if cluster_ids else -1
+        available_activities = cluster_dict.get(cluster_id, []) + noise_activities
+        available_activities = sorted(available_activities, key=lambda x: x["score"], reverse=True)
+        activity_count = 0
+        max_activities = 3 if cluster_id == -1 else min(5, len(available_activities))  # Increased for noise days
+        is_noise_day = cluster_id == -1
+        max_travel = NOISE_TRAVEL_DISTANCE if is_noise_day else MAX_TRAVEL_DISTANCE
+        current_time = datetime.strptime("09:00", "%H:%M")
+        print(f"generate_itinerary: Processing Day {day}, Cluster {cluster_id}, Max activities: {max_activities}, Budget left: {remaining_budget:.2f}")
+
+        for activity in available_activities:
+            if activity_count >= max_activities or total_duration[day] >= MAX_HOURS_PER_DAY or remaining_budget <= MINIMUM_BUDGET:
+                print(f"generate_itinerary: Day {day} stopped: activities={activity_count}/{max_activities}, duration={total_duration[day]}/{MAX_HOURS_PER_DAY}, budget={remaining_budget}/{MINIMUM_BUDGET}")
+                break
+            activity_name = normalize_name(activity["activity"]["name"])
+            cost = float(activity["activity"]["estimatedCost"]) * people
+            duration = float(activity.get("duration", 2))
             if (activity_name not in used_activities_per_day[day] and 
-                activity_name not in used_activities and 
-                total_cost <= remaining_budget and 
-                total_duration[day] + duration <= 12):
+                cost <= remaining_budget - MINIMUM_BUDGET and 
+                total_duration[day] + duration <= MAX_HOURS_PER_DAY and
+                activity_name in activity_name_to_index):
+                start_time, end_time = assign_time_slot(current_time, duration)
                 itinerary.append({
-                    "category": activity.get("category", "Activity"),
+                    "category": activity["activity"]["category"],
+                    "cluster_id": int(cluster_id),
                     "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
-                    "day": day,
-                    "duration": duration,
-                    "estimatedCost": total_cost,
-                    "latitude": activity.get("latitude", 0),
-                    "longitude": activity.get("longitude", 0),
-                    "location": activity["location"],
-                    "name": activity["name"],
-                    "rating": activities[activity_index]["rating"],
-                    "timeSlot": time_slot
+                    "day": int(day),
+                    "duration": float(duration),
+                    "durationUnit": "hours",
+                    "estimatedCost": float(cost),
+                    "index": int(len(itinerary)),
+                    "latitude": float(activity["activity"]["latitude"]),
+                    "location": activity["activity"]["location"],
+                    "longitude": float(activity["activity"]["longitude"]),
+                    "name": activity["activity"]["name"],
+                    "rating": float(activity["rating"]),
+                    "time_slot": f"{start_time}-{end_time}"
                 })
                 used_activities_per_day[day].add(activity_name)
-                used_activities.add(activity_name)
-                remaining_budget -= total_cost
+                remaining_budget -= cost
                 total_duration[day] += duration
-                daily_activities += 1
-                print(f"Assigned activity: {activity['name']}, Cost: {total_cost}, Day: {day}, TimeSlot: {time_slot}")
+                activity_count += 1
+                daily_activities.append(activity)
+                current_time += timedelta(hours=duration)
+                print(f"generate_itinerary: Assigned: {activity['activity']['name']}, Cost: {cost}, Time: {start_time}-{end_time}, Budget left: {remaining_budget:.2f} INR")
             else:
-                print(f"Skipped activity: {activity['name']}, Cost: {total_cost}, Duration: {duration}, Budget OK: {total_cost <= remaining_budget}, Duration OK: {total_duration[day] + duration <= 12}, Already Used: {activity_name in used_activities_per_day[day] or activity_name in used_activities}")
-            activity_index += 1
+                print(f"generate_itinerary: Skipped '{activity_name}' (used: {activity_name in used_activities_per_day[day]}, cost: {cost}/{remaining_budget-MINIMUM_BUDGET}, duration: {total_duration[day]+duration}/{MAX_HOURS_PER_DAY}, in_index: {activity_name in activity_name_to_index})")
 
-    # Redistribution to fill all days with no free time
+        daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+        print(f"generate_itinerary: Day {day} itinerary: {[a['name'] for a in daily_itinerary]}")
+        i = 0
+        while i < len(daily_itinerary) - 1:
+            activity = daily_itinerary[i]
+            next_activity = daily_itinerary[i + 1]
+            prev_name = normalize_name(activity["name"])
+            curr_name = normalize_name(next_activity["name"])
+            print(f"generate_itinerary: Travel: {activity['name']} to {next_activity['name']}")
+            try:
+                prev_idx = activity_name_to_index.get(prev_name)
+                curr_idx = activity_name_to_index.get(curr_name)
+                distance_km = distance_matrix[prev_idx][curr_idx] if prev_idx is not None and curr_idx is not None else haversine(
+                    activity["longitude"], activity["latitude"],
+                    next_activity["longitude"], next_activity["latitude"]
+                )
+                distance_km = round(distance_km)
+                if distance_km == 0:
+                    distance_km = 1
+                if total_travel_distance[day] + distance_km > max_travel:
+                    print(f"generate_itinerary: Skipping travel from {activity['name']} to {next_activity['name']} (exceeds {max_travel} km, total: {total_travel_distance[day] + distance_km})")
+                    itinerary = [a for a in itinerary if a != next_activity]
+                    used_activities_per_day[day].remove(curr_name)
+                    total_duration[day] -= next_activity["duration"]
+                    daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                    if len(daily_itinerary) < 2:
+                        break
+                    continue
+                travel_cost = float(distance_km * TAXI_RATE) * people
+                estimated_time = float(distance_km / AVERAGE_SPEED)
+                duration, duration_unit = format_duration(estimated_time)
+                if travel_cost > remaining_budget - MINIMUM_BUDGET:
+                    print(f"generate_itinerary: Skipping travel (cost: {travel_cost:.2f} > budget: {remaining_budget-MINIMUM_BUDGET:.2f})")
+                    itinerary = [a for a in itinerary if a != next_activity]
+                    used_activities_per_day[day].remove(curr_name)
+                    total_duration[day] -= next_activity["duration"]
+                    daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                    if len(daily_itinerary) < 2:
+                        break
+                    continue
+                if total_duration[day] + estimated_time > MAX_HOURS_PER_DAY:
+                    print(f"generate_itinerary: Skipping travel (duration: {total_duration[day] + estimated_time} > {MAX_HOURS_PER_DAY})")
+                    itinerary = [a for a in itinerary if a != next_activity]
+                    used_activities_per_day[day].remove(curr_name)
+                    total_duration[day] -= next_activity["duration"]
+                    daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                    if len(daily_itinerary) < 2:
+                        break
+                    continue
+                start_time, end_time = assign_time_slot(current_time, estimated_time)
+                itinerary.append({
+                    "category": "Travel",
+                    "cluster_id": int(cluster_id),
+                    "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
+                    "day": int(day),
+                    "distance": int(distance_km),
+                    "duration": float(duration),
+                    "durationUnit": duration_unit,
+                    "estimatedCost": float(travel_cost),
+                    "index": int(len(itinerary)),
+                    "latitude": float(next_activity["latitude"]),
+                    "location": f"Travel from {activity['name']} to {next_activity['name']}",
+                    "longitude": float(next_activity["longitude"]),
+                    "name": f"Travel to {next_activity['name']}",
+                    "rating": 0.0,
+                    "time_slot": f"{start_time}-{end_time}"
+                })
+                total_travel_distance[day] += distance_km
+                remaining_budget -= travel_cost
+                total_duration[day] += estimated_time
+                current_time += timedelta(hours=estimated_time)
+                print(f"generate_itinerary: Added travel: {activity['name']} to {next_activity['name']}, Distance: {distance_km} km, Duration: {duration} {duration_unit}, Cost: {travel_cost:.2f} INR")
+                i += 1
+            except Exception as e:
+                print(f"generate_itinerary: Error calculating distance: {e}")
+                i += 1
+
     start_time = time.time()
-    active_days = set(activity["day"] for activity in itinerary if activity["category"] != "Free Time")
-    print(f"Active days after initial assignment: {len(active_days)}")
-    all_activities = activities[:]
-    max_redistribution_attempts = 5  # Prevent infinite loop
+    active_days = set(activity["day"] for activity in itinerary if activity["category"] != "Travel")
+    max_redistribution_attempts = 15
     attempt = 0
-    while (len(active_days) < days or any(total_duration[day] < 12 for day in range(1, days + 1))) and attempt < max_redistribution_attempts:
-        print(f"Redistributing activities to fill all days with no free time (Attempt {attempt + 1}/{max_redistribution_attempts})")
-        # Fetch more activities if needed
-        required_activities = sum(1 for day in range(1, days + 1) if total_duration[day] < 12)
-        if len(all_activities) < len(activities) + required_activities:
-            additional_spots = fetch_low_cost_activities(destination, remaining_budget, people, required_activities * 2)  # Double the request to ensure variety
-            if additional_spots:
-                for spot in additional_spots:
-                    if "duration" not in spot:
-                        spot["duration"] = 2
-                all_activities.extend(additional_spots)
-                X = preprocess_activities(all_activities, budget_per_person_per_day)
-                scores = model.predict(X)
-                for i, activity in enumerate(all_activities):
-                    activity["score"] = scores[i]
-                all_activities.sort(key=lambda x: x["score"], reverse=True)
-            else:
-                print("Warning: No additional activities fetched. Redistribution may fail.")
-                break
+    while len(active_days) < days and attempt < max_redistribution_attempts and remaining_budget > MINIMUM_BUDGET:
+        print(f"generate_itinerary: Redistributing (Attempt {attempt + 1}/{max_redistribution_attempts}), Active days: {len(active_days)}/{days}, Budget: {remaining_budget:.2f}")
+        required_activities = (days - len(active_days)) * 5
+        additional_spots = fetch_low_cost_activities(destination, remaining_budget, people, required_activities * 2)
+        additional_names = []
+        for s in additional_spots:
+            name = str(s["activity"]["name"])
+            additional_names.append(name)
+            print(f"generate_itinerary: Additional spot: '{name}', type: {type(name)}, cost: {s['activity']['estimatedCost']}")
+        print(f"generate_itinerary: Fetched {len(additional_spots)} additional spots: {additional_names}")
 
-        activity_idx = 0
+        if additional_spots:
+            valid_additional_spots = []
+            additional_locations = []
+            for idx, spot in enumerate(additional_spots):
+                name = str(spot["activity"]["name"])
+                lat = float(spot["activity"].get("latitude", 0))
+                lon = float(spot["activity"].get("longitude", 0))
+                normalized_name = normalize_name(name)
+                if lat != 0 and lon != 0:
+                    spot["activity"]["estimatedCost"] *= 0.5
+                    spot["activity"]["name"] = name
+                    tags = spot["activity"]["tags"]
+                    if isinstance(tags, np.ndarray):
+                        tags = tags.tolist()
+                    spot["activity"]["tags"] = [str(tag) for tag in tags]
+                    valid_additional_spots.append(spot)
+                    additional_locations.append((lon, lat))
+                    activity_name_to_index[normalized_name] = len(valid_activities) + len(valid_additional_spots) - 1
+                    print(f"generate_itinerary: Valid additional spot: '{name}', normalized: '{normalized_name}', cost: {spot['activity']['estimatedCost']}")
+                else:
+                    print(f"generate_itinerary: Skipping additional spot '{name}' (invalid lat: {lat}, lon: {lon})")
+            if valid_additional_spots:
+                valid_activities.extend(valid_additional_spots)
+                locations.extend(additional_locations)
+                distance_matrix = fetch_distance_matrix(locations, use_haversine=True)
+                clusters = cluster_locations(distance_matrix, eps_km=20, min_samples=2)
+                cluster_dict = {}
+                for idx, cluster_id in enumerate(clusters):
+                    if cluster_id not in cluster_dict:
+                        cluster_dict[cluster_id] = []
+                    cluster_dict[cluster_id].append(valid_activities[idx])
+                X = preprocess_activities(valid_activities, budget_per_person_per_day)
+                scores = model.predict(X)
+                for i, activity in enumerate(valid_activities):
+                    activity["score"] = float(scores[i])
+                print(f"generate_itinerary: Updated clusters: {len(cluster_dict)}, Total activities: {len(valid_activities)}")
+
+        # Prioritize empty days
         for day in range(1, days + 1):
-            if total_duration[day] < 12:
-                daily_activities = sum(1 for a in itinerary if a["day"] == day and a["category"] != "Free Time")
-                while (total_duration[day] < 12 and 
-                       activity_idx < len(all_activities) and 
-                       remaining_budget > 0):
-                    activity = all_activities[activity_idx]["activity"]
-                    activity_name = activity["name"]
-                    cost = activity["estimatedCost"]
-                    total_cost = cost * people
-                    time_slot = activity["timeSlot"].lower()
-                    duration = all_activities[activity_idx].get("duration", 2)
-                    if (activity_name not in used_activities_per_day[day] and 
-                        activity_name not in used_activities and 
-                        total_cost <= remaining_budget and 
-                        total_duration[day] + duration <= 12):
+            if day in active_days and total_duration[day] >= MAX_HOURS_PER_DAY:
+                print(f"generate_itinerary: Skipping Day {day} (already full, duration: {total_duration[day]})")
+                continue
+            if day in active_days:
+                continue  # Skip non-empty days in early redistribution
+            cluster_id = cluster_ids[(day - 1) % len(cluster_ids)] if cluster_ids else -1
+            available_activities = cluster_dict.get(cluster_id, []) + noise_activities
+            available_activities = sorted(available_activities, key=lambda x: (x["score"], x["rating"]), reverse=True)
+            daily_activities = []
+            is_noise_day = cluster_id == -1
+            max_activities = 3 if is_noise_day else min(5, len(available_activities))
+            max_travel = NOISE_TRAVEL_DISTANCE if is_noise_day else MAX_TRAVEL_DISTANCE
+            activity_count = len([a for a in itinerary if a["day"] == day and a["category"] != "Travel"])
+            current_time = datetime.strptime("09:00", "%H:%M")
+            print(f"generate_itinerary: Redistributing Day {day}, Cluster {cluster_id}, Current time: {current_time.strftime('%H:%M')}, Budget: {remaining_budget:.2f}")
+
+            for activity in available_activities:
+                if activity_count >= max_activities or total_duration[day] >= MAX_HOURS_PER_DAY or remaining_budget <= MINIMUM_BUDGET:
+                    print(f"generate_itinerary: Day {day} stopped in redistribution: activities={activity_count}/{max_activities}, duration={total_duration[day]}/{MAX_HOURS_PER_DAY}, budget={remaining_budget}/{MINIMUM_BUDGET}")
+                    break
+                activity_name = normalize_name(activity["activity"]["name"])
+                cost = float(activity["activity"]["estimatedCost"]) * people
+                duration = float(activity.get("duration", 2))
+                if (activity_name not in used_activities_per_day[day] and 
+                    cost <= remaining_budget - MINIMUM_BUDGET and 
+                    total_duration[day] + duration <= MAX_HOURS_PER_DAY and
+                    activity_name in activity_name_to_index):
+                    start_time, end_time = assign_time_slot(current_time, duration)
+                    itinerary.append({
+                        "category": activity["activity"]["category"],
+                        "cluster_id": int(cluster_id),
+                        "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
+                        "day": int(day),
+                        "duration": float(duration),
+                        "durationUnit": "hours",
+                        "estimatedCost": float(cost),
+                        "index": int(len(itinerary)),
+                        "latitude": float(activity["activity"]["latitude"]),
+                        "location": activity["activity"]["location"],
+                        "longitude": float(activity["activity"]["longitude"]),
+                        "name": activity["activity"]["name"],
+                        "rating": float(activity["rating"]),
+                        "time_slot": f"{start_time}-{end_time}"
+                    })
+                    used_activities_per_day[day].add(activity_name)
+                    remaining_budget -= cost
+                    total_duration[day] += duration
+                    activity_count += 1
+                    daily_activities.append(activity)
+                    current_time += timedelta(hours=duration)
+                    print(f"generate_itinerary: Redistribution assigned: {activity['activity']['name']}, Cost: {cost}, Time: {start_time}-{end_time}, Budget left: {remaining_budget:.2f}")
+                else:
+                    print(f"generate_itinerary: Redistribution skipped '{activity_name}' (used: {activity_name in used_activities_per_day[day]}, cost: {cost}/{remaining_budget-MINIMUM_BUDGET}, duration: {total_duration[day]+duration}/{MAX_HOURS_PER_DAY}, in_index: {activity_name in activity_name_to_index})")
+
+            daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+            i = 0
+            while i < len(daily_itinerary) - 1:
+                activity = daily_itinerary[i]
+                next_activity = daily_itinerary[i + 1]
+                prev_name = normalize_name(activity["name"])
+                curr_name = normalize_name(next_activity["name"])
+                try:
+                    prev_idx = activity_name_to_index.get(prev_name)
+                    curr_idx = activity_name_to_index.get(curr_name)
+                    distance_km = distance_matrix[prev_idx][curr_idx] if prev_idx is not None and curr_idx is not None else haversine(
+                        activity["longitude"], activity["latitude"],
+                        next_activity["longitude"], next_activity["latitude"]
+                    )
+                    distance_km = round(distance_km)
+                    if distance_km == 0:
+                        distance_km = 1
+                    if total_travel_distance[day] + distance_km > max_travel:
+                        print(f"generate_itinerary: Redistribution skipping travel from {activity['name']} to {next_activity['name']} (exceeds {max_travel} km, total: {total_travel_distance[day] + distance_km})")
+                        itinerary = [a for a in itinerary if a != next_activity]
+                        used_activities_per_day[day].remove(curr_name)
+                        total_duration[day] -= next_activity["duration"]
+                        daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                        if len(daily_itinerary) < 2:
+                            break
+                        continue
+                    travel_cost = float(distance_km * TAXI_RATE) * people
+                    estimated_time = float(distance_km / AVERAGE_SPEED)
+                    duration, duration_unit = format_duration(estimated_time)
+                    if travel_cost > remaining_budget - MINIMUM_BUDGET:
+                        print(f"generate_itinerary: Redistribution skipping travel (cost: {travel_cost:.2f} > budget: {remaining_budget-MINIMUM_BUDGET:.2f})")
+                        itinerary = [a for a in itinerary if a != next_activity]
+                        used_activities_per_day[day].remove(curr_name)
+                        total_duration[day] -= next_activity["duration"]
+                        daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                        if len(daily_itinerary) < 2:
+                            break
+                        continue
+                    if total_duration[day] + estimated_time > MAX_HOURS_PER_DAY:
+                        print(f"generate_itinerary: Redistribution skipping travel (duration: {total_duration[day] + estimated_time} > {MAX_HOURS_PER_DAY})")
+                        itinerary = [a for a in itinerary if a != next_activity]
+                        used_activities_per_day[day].remove(curr_name)
+                        total_duration[day] -= next_activity["duration"]
+                        daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                        if len(daily_itinerary) < 2:
+                            break
+                        continue
+                    start_time, end_time = assign_time_slot(current_time, estimated_time)
+                    itinerary.append({
+                        "category": "Travel",
+                        "cluster_id": int(cluster_id),
+                        "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
+                        "day": int(day),
+                        "distance": int(distance_km),
+                        "duration": float(duration),
+                        "durationUnit": duration_unit,
+                        "estimatedCost": float(travel_cost),
+                        "index": int(len(itinerary)),
+                        "latitude": float(next_activity["latitude"]),
+                        "location": f"Travel from {activity['name']} to {next_activity['name']}",
+                        "longitude": float(next_activity["longitude"]),
+                        "name": f"Travel to {next_activity['name']}",
+                        "rating": 0.0,
+                        "time_slot": f"{start_time}-{end_time}"
+                    })
+                    total_travel_distance[day] += distance_km
+                    remaining_budget -= travel_cost
+                    total_duration[day] += estimated_time
+                    current_time += timedelta(hours=estimated_time)
+                    print(f"generate_itinerary: Redistribution added travel: {activity['name']} to {next_activity['name']}, Distance: {distance_km} km, Duration: {duration} {duration_unit}, Cost: {travel_cost:.2f} INR")
+                    i += 1
+                except Exception as e:
+                    print(f"generate_itinerary: Redistribution error calculating distance: {e}")
+                    i += 1
+
+        # Allow reuse of activities if no new spots are available
+        if not additional_spots and len(active_days) < days:
+            print(f"generate_itinerary: No additional spots, allowing activity reuse")
+            for day in range(1, days + 1):
+                if day in active_days:
+                    continue
+                cluster_id = cluster_ids[(day - 1) % len(cluster_ids)] if cluster_ids else -1
+                available_activities = cluster_dict.get(cluster_id, []) + noise_activities
+                available_activities = sorted(available_activities, key=lambda x: (x["score"], x["rating"]), reverse=True)
+                activity_count = 0
+                max_activities = 3 if cluster_id == -1 else min(5, len(available_activities))
+                current_time = datetime.strptime("09:00", "%H:%M")
+                print(f"generate_itinerary: Reusing for Day {day}, Cluster {cluster_id}")
+
+                for activity in available_activities:
+                    if activity_count >= max_activities or total_duration[day] >= MAX_HOURS_PER_DAY or remaining_budget <= MINIMUM_BUDGET:
+                        print(f"generate_itinerary: Reuse Day {day} stopped: activities={activity_count}/{max_activities}, duration={total_duration[day]}/{MAX_HOURS_PER_DAY}, budget={remaining_budget}/{MINIMUM_BUDGET}")
+                        break
+                    activity_name = normalize_name(activity["activity"]["name"])
+                    cost = float(activity["activity"]["estimatedCost"]) * people
+                    duration = float(activity.get("duration", 2))
+                    if (cost <= remaining_budget - MINIMUM_BUDGET and 
+                        total_duration[day] + duration <= MAX_HOURS_PER_DAY and
+                        activity_name in activity_name_to_index):
+                        start_time, end_time = assign_time_slot(current_time, duration)
                         itinerary.append({
-                            "category": activity.get("category", "Activity"),
+                            "category": activity["activity"]["category"],
+                            "cluster_id": int(cluster_id),
                             "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
-                            "day": day,
-                            "duration": duration,
-                            "estimatedCost": total_cost,
-                            "latitude": activity.get("latitude", 0),
-                            "longitude": activity.get("longitude", 0),
-                            "location": activity["location"],
-                            "name": activity["name"],
-                            "rating": all_activities[activity_idx]["rating"],
-                            "timeSlot": time_slot
+                            "day": int(day),
+                            "duration": float(duration),
+                            "durationUnit": "hours",
+                            "estimatedCost": float(cost),
+                            "index": int(len(itinerary)),
+                            "latitude": float(activity["activity"]["latitude"]),
+                            "location": activity["activity"]["location"],
+                            "longitude": float(activity["activity"]["longitude"]),
+                            "name": activity["activity"]["name"],
+                            "rating": float(activity["rating"]),
+                            "time_slot": f"{start_time}-{end_time}"
                         })
                         used_activities_per_day[day].add(activity_name)
-                        used_activities.add(activity_name)
-                        remaining_budget -= total_cost
+                        remaining_budget -= cost
                         total_duration[day] += duration
-                        daily_activities += 1
-                        print(f"Redistribution assigned: {activity['name']}, Cost: {total_cost}, Day: {day}, TimeSlot: {time_slot}")
-                    else:
-                        print(f"Redistribution skipped: {activity['name']}, Cost: {total_cost}, Duration: {duration}, Budget OK: {total_cost <= remaining_budget}, Duration OK: {total_duration[day] + duration <= 12}, Already Used: {activity_name in used_activities_per_day[day] or activity_name in used_activities}")
-                    activity_idx += 1
-        active_days = set(activity["day"] for activity in itinerary if activity["category"] != "Free Time")
+                        activity_count += 1
+                        current_time += timedelta(hours=duration)
+                        print(f"generate_itinerary: Reuse assigned: {activity['activity']['name']}, Cost: {cost}, Time: {start_time}-{end_time}, Budget left: {remaining_budget:.2f}")
+
+                daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                i = 0
+                while i < len(daily_itinerary) - 1:
+                    activity = daily_itinerary[i]
+                    next_activity = daily_itinerary[i + 1]
+                    prev_name = normalize_name(activity["name"])
+                    curr_name = normalize_name(next_activity["name"])
+                    try:
+                        prev_idx = activity_name_to_index.get(prev_name)
+                        curr_idx = activity_name_to_index.get(curr_name)
+                        distance_km = distance_matrix[prev_idx][curr_idx] if prev_idx is not None and curr_idx is not None else haversine(
+                            activity["longitude"], activity["latitude"],
+                            next_activity["longitude"], next_activity["latitude"]
+                        )
+                        distance_km = round(distance_km)
+                        if distance_km == 0:
+                            distance_km = 1
+                        if total_travel_distance[day] + distance_km > max_travel:
+                            print(f"generate_itinerary: Reuse skipping travel from {activity['name']} to {next_activity['name']} (exceeds {max_travel} km)")
+                            itinerary = [a for a in itinerary if a != next_activity]
+                            used_activities_per_day[day].remove(curr_name)
+                            total_duration[day] -= next_activity["duration"]
+                            daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                            if len(daily_itinerary) < 2:
+                                break
+                            continue
+                        travel_cost = float(distance_km * TAXI_RATE) * people
+                        estimated_time = float(distance_km / AVERAGE_SPEED)
+                        duration, duration_unit = format_duration(estimated_time)
+                        if travel_cost > remaining_budget - MINIMUM_BUDGET:
+                            print(f"generate_itinerary: Reuse skipping travel (cost: {travel_cost:.2f} > budget: {remaining_budget-MINIMUM_BUDGET:.2f})")
+                            itinerary = [a for a in itinerary if a != next_activity]
+                            used_activities_per_day[day].remove(curr_name)
+                            total_duration[day] -= next_activity["duration"]
+                            daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                            if len(daily_itinerary) < 2:
+                                break
+                            continue
+                        if total_duration[day] + estimated_time > MAX_HOURS_PER_DAY:
+                            print(f"generate_itinerary: Reuse skipping travel (duration: {total_duration[day] + estimated_time} > {MAX_HOURS_PER_DAY})")
+                            itinerary = [a for a in itinerary if a != next_activity]
+                            used_activities_per_day[day].remove(curr_name)
+                            total_duration[day] -= next_activity["duration"]
+                            daily_itinerary = [a for a in itinerary if a["day"] == day and a["category"] != "Travel"]
+                            if len(daily_itinerary) < 2:
+                                break
+                            continue
+                        start_time, end_time = assign_time_slot(current_time, estimated_time)
+                        itinerary.append({
+                            "category": "Travel",
+                            "cluster_id": int(cluster_id),
+                            "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
+                            "day": int(day),
+                            "distance": int(distance_km),
+                            "duration": float(duration),
+                            "durationUnit": duration_unit,
+                            "estimatedCost": float(travel_cost),
+                            "index": int(len(itinerary)),
+                            "latitude": float(next_activity["latitude"]),
+                            "location": f"Travel from {activity['name']} to {next_activity['name']}",
+                            "longitude": float(next_activity["longitude"]),
+                            "name": f"Travel to {next_activity['name']}",
+                            "rating": 0.0,
+                            "time_slot": f"{start_time}-{end_time}"
+                        })
+                        total_travel_distance[day] += distance_km
+                        remaining_budget -= travel_cost
+                        total_duration[day] += estimated_time
+                        current_time += timedelta(hours=estimated_time)
+                        print(f"generate_itinerary: Reuse added travel: {activity['name']} to {next_activity['name']}, Distance: {distance_km} km, Duration: {duration} {duration_unit}, Cost: {travel_cost:.2f} INR")
+                        i += 1
+                    except Exception as e:
+                        print(f"generate_itinerary: Reuse error calculating distance: {e}")
+                        i += 1
+
+        active_days = set(activity["day"] for activity in itinerary if activity["category"] != "Travel")
         attempt += 1
-    print(f"Redistribution completed in {time.time() - start_time:.2f} seconds, Final activities: {len([a for a in itinerary if a['category'] != 'Free Time'])}")
+        if not additional_spots and len(active_days) == len(set(used_activities_per_day.keys())):
+            print(f"generate_itinerary: No additional spots and all activities reused, stopping redistribution")
+            break
 
-    start_time = time.time()
-    time_slot_order = {"morning": 1, "afternoon": 2, "daytime": 3, "evening": 4}
-    itinerary.sort(key=lambda x: (x["day"], time_slot_order.get(x["timeSlot"], 3)))
-    print(f"Itinerary sorted in {time.time() - start_time:.2f} seconds")
-
-    total_cost = sum(activity["estimatedCost"] for activity in itinerary)
-    if total_cost > budget:
-        raise ValueError(f"Itinerary exceeds budget: Total cost {total_cost} > {budget}")
-
-    print(f"Final itinerary: {len(itinerary)} activities, Total cost: {total_cost}")
-    return {"activities": itinerary}
-
-
-
-
-#Training the model and checking the accuracy:-------
-def train_model():
-    if os.path.exists("activity_scoring_model.pkl"):
-        os.remove("activity_scoring_model.pkl")
-    data = generate_training_data()
-    X = data.drop("relevance_score", axis=1)[FEATURE_ORDER]
-    y = data["relevance_score"]
-
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = RandomForestRegressor(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
-
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-
-    print("📊 Model Evaluation:")
-    print(f"Mean Squared Error (MSE): {mse:.4f}")
-    print(f"Mean Absolute Error (MAE): {mae:.4f}")
-    print(f"R² Score: {r2:.4f}")
-
-    joblib.dump(model, "activity_scoring_model.pkl")
-    print("✅ Model saved as activity_scoring_model.pkl")
-    return model, FEATURE_ORDER
+    itinerary.sort(key=lambda x: (x["day"], x["index"]))
+    print(f"generate_itinerary: Total cost: {budget - remaining_budget:.2f} INR, Remaining budget: {remaining_budget:.2f} INR")
+    print(f"generate_itinerary: Active days: {active_days}, Total activities: {len([a for a in itinerary if a['category'] != 'Travel'])}")
+    return convert_to_serializable({"activities": itinerary})
