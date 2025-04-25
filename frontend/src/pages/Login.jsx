@@ -45,7 +45,7 @@ const Login = () => {
       // Call backend API here with loginData
       try {
         const response = await login(loginData.email, loginData.password);
-        console.log('Response:', response);
+        console.log('login Response:', response.data);
   
         if (response.status === 200) {
           toast.success('Login successful!');

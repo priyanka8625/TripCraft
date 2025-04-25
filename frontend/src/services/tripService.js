@@ -45,3 +45,23 @@ export const getAllTrips = async()=>{
   }
 }
 
+
+// Get recent trips
+export const getRecentTrips = async () => {
+  try {
+    const response = await api.get('/trips/recent');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: 'Failed to fetch recent trips' };
+  }
+};
+
+// Get upcoming trips
+export const getUpcomingTrips = async () => {
+  try {
+    const response = await api.get('/trips/upcoming');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: 'Failed to fetch upcoming trips' };
+  }
+};

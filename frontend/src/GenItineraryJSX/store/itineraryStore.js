@@ -21,13 +21,18 @@ export const useItineraryStore = create((set) => ({
       ],
     })),
   addItem: (dayId, item) =>
-    set((state) => ({
-      days: state.days.map((day) =>
-        day.id === dayId
-          ? { ...day, items: [...day.items, item] }
-          : day
-      ),
-    })),
+    set((state) => {
+      console.log('addItem - dayId:', dayId, 'item:', item); // Debug item being added
+      const newState = {
+        days: state.days.map((day) =>
+          day.id === dayId
+            ? { ...day, items: [...day.items, item] }
+            : day
+        ),
+      };
+      console.log('addItem - new state:', newState); // Debug state after adding
+      return newState;
+    }),
   updateItem: (dayId, updatedItem) =>
     set((state) => ({
       days: state.days.map((day) =>

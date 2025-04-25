@@ -22,7 +22,7 @@ const UserMenu = ({ user = {} }) => {
         <img
           src={user?.avatar || 'https://via.placeholder.com/32'}
           alt={user?.name || 'User'}
-          className="h-8 w-8 rounded-lg ring-2 ring-emerald-200"
+          className="h-10 w-10 rounded-lg "
         />
         <span className="font-medium text-gray-700">{user?.name || 'User'}</span>
       </div>
