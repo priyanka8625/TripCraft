@@ -9,7 +9,7 @@ public class Activity {
     private double rating;
     private String name;
     private String location;
-    private String timeSlot;
+    private String time_slot;
     private double estimatedCost;
 
     // New fields for location coordinates
@@ -60,10 +60,10 @@ public class Activity {
     }
 
     public String getTimeSlot() {
-        return timeSlot;
+        return time_slot;
     }
     public void setTimeSlot(String timeSlot) {
-        this.timeSlot = timeSlot;
+        this.time_slot = timeSlot;
     }
 
     public double getEstimatedCost() {

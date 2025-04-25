@@ -61,25 +61,29 @@ export const useItineraryStore = create((set) => ({
     set((state) => ({
       collaborators: [...state.collaborators, email],
     })),
+  setCollaborators: (collaborators) =>
+    set(() => ({
+      collaborators,
+    })),
   setTitle: (title) =>
     set(() => ({
-      title
+      title,
     })),
   setDestination: (destination) =>
     set(() => ({
-      destination
+      destination,
     })),
   setDates: (startDate, endDate) =>
     set(() => ({
       startDate,
-      endDate
+      endDate,
     })),
   setBudget: (budget) =>
     set(() => ({
-      budget
+      budget,
     })),
   setSuggestedPeople: (suggestedPeople) =>
     set(() => ({
-      suggestedPeople
+      suggestedPeople,
     })),
 }));

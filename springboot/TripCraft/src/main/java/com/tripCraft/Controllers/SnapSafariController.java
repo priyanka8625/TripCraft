@@ -175,7 +175,7 @@ public class SnapSafariController {
         
         User user = userOptional.get();
         String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
-        
+        String name=user.getName();
         if (optionalPost.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "Post not found"));
@@ -188,7 +188,7 @@ public class SnapSafariController {
             post.setComments(new ArrayList<>());
         }
 
-        Comment comment = new Comment(userId, commentText); // Include username
+        Comment comment = new Comment(userId,name, commentText); // Include username
         post.getComments().add(comment);
         snapSafariRepository.save(post);
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);

@@ -11,6 +11,18 @@ export const createTripWithAi = async (tripData) => {
   }
 };
 
+// New manual trip creation function
+export const createManualTrip = async (tripData) => {
+  try {
+    const response = await api.post('/trips/create', tripData);
+    console.log(response.data);
+    
+    return response.data; // Returns { tripId, spots }
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to create manual trip');
+  }
+};
+
 // Service to fetch a trip by ID via GET API
 export const getItineraryWithTripId = async (tripId) => {
     try {
@@ -32,3 +44,4 @@ export const getAllTrips = async()=>{
     throw new Error(error.response?.data?.message || 'Failed to fetch trips');
   }
 }
+

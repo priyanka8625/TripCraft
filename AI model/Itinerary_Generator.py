@@ -50,8 +50,8 @@ def convert_to_serializable(data):
 def generate_itinerary(user_input):
     start_time = time.time()
     try:
-        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
-        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
+        start_date = datetime.strptime(user_input["trip"]["startDate"], "%Y-%m-%d")
+        end_date = datetime.strptime(user_input["trip"]["endDate"], "%Y-%m-%d")
         days = (end_date - start_date).days + 1
         people = int(user_input["people"])
         budget = float(user_input["budget"])

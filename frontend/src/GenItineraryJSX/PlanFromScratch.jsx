@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   DndContext,
   MouseSensor,
@@ -6,14 +6,13 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Sidebar } from "./components/Sidebar";
-import { ItineraryDay } from "./components/ItineraryDay";
-import { PlanningForm } from "./components/PlanningForm";
+import { Sidebar } from "./planFromScratch/Sidebar";
+import { ItineraryDay } from "./planFromScratch/ItineraryDay";
 import { useItineraryStore } from "./store/itineraryStore";
 import { Calendar, Plus, Users } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
-function GenItineraryJSX() {
-  const [showPlanner, setShowPlanner] = useState(true);
+function PlanFromScratch() {
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false);
   const {
     days,
@@ -28,7 +27,64 @@ function GenItineraryJSX() {
     endDate,
     budget,
     suggestedPeople,
+    setTitle,
+    setDates, // Use setDates instead of setStartDate and setEndDate
+    setBudget,
+    setSuggestedPeople,
+    setCollaborators,
   } = useItineraryStore();
+
+  const location = useLocation();
+  // Initialize store and extract recommendations
+  const [recommendations, setRecommendations] = useState([]);
+
+  // Initialize store with trip details from CreateTrip form (if available)
+  useEffect(() => {
+    console.log("location.state:", location.state); // Debug state
+    const tripData = location.state?.tripData;
+    const spots = location.state?.spots;
+    console.log("tripData:", tripData); // Debug tripData
+    console.log("spots:", spots); // Debug spots
+    
+    if (tripData) {
+      setTitle(tripData.title || "");
+      setDestination(tripData.destination || "");
+      setDates(tripData.startDate || "", tripData.endDate || ""); // Use setDates
+      setBudget(tripData.budget || 0);
+      setSuggestedPeople(tripData.people || 1);
+      setCollaborators(tripData.collaborators || []);
+      // Assuming recommendations are passed in tripData.recommendations
+      setRecommendations(spots || []);
+
+      // Ensure spots is an array and map if necessary
+      if (Array.isArray(spots) && spots.length > 0) {
+        const mappedSpots = spots.map((spot) => ({
+          id: spot.id || crypto.randomUUID(), // Ensure unique ID
+          category: spot.category || "unknown",
+          estimatedCost: spot.estimatedCost || 0,
+          latitude: spot.latitude || 0,
+          location: spot.location || "Unknown",
+          longitude: spot.longitude || 0,
+          name: spot.name || "Unnamed Spot",
+          rating: spot.rating || 0,
+          timeSlot: spot.timeSlot || "Any",
+        }));
+        console.log("mappedSpots:", mappedSpots); // Debug mapped spots
+        setRecommendations(mappedSpots);
+      } else {
+        console.log("No valid spots found, setting recommendations to []");
+        setRecommendations([]);
+      }
+    }
+  }, [
+    location.state,
+    setTitle,
+    setDestination,
+    setDates, // Update dependency
+    setBudget,
+    setSuggestedPeople,
+    setCollaborators,
+  ]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -88,11 +144,6 @@ function GenItineraryJSX() {
     }
   };
 
-  const handlePlanningComplete = (data) => {
-    setDestination(data.destination);
-    setShowPlanner(false);
-  };
-
   const calculateRemainingDays = () => {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
@@ -101,10 +152,6 @@ function GenItineraryJSX() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays + 1 - days.length);
   };
-
-  if (showPlanner) {
-    return <PlanningForm onComplete={handlePlanningComplete} />;
-  }
 
   const remainingDays = calculateRemainingDays();
   const tripDuration = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
@@ -120,7 +167,7 @@ function GenItineraryJSX() {
             </h2>
           </div>
           <div className="flex-1 overflow-auto">
-            <Sidebar />
+          <Sidebar recommendations={recommendations} />
           </div>
         </div>
         <div className="flex-1 flex flex-col">
@@ -163,7 +210,7 @@ function GenItineraryJSX() {
                       Overall Budget
                     </h4>
                     <p className="mt-2 text-lg font-semibold">
-                      ${totalBudget.toLocaleString()}
+                      {totalBudget.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -184,7 +231,7 @@ function GenItineraryJSX() {
               </div>
               <div className="space-y-8">
                 {days.map((day) => (
-                  <ItineraryDay key={day.id} day={day} />
+                  <ItineraryDay key={day?.id} day={day} />
                 ))}
                 {days.length === 0 && (
                   <div className="text-center py-16 bg-white rounded-lg">
@@ -257,4 +304,4 @@ function GenItineraryJSX() {
   );
 }
 
-export default GenItineraryJSX;
+export default PlanFromScratch;

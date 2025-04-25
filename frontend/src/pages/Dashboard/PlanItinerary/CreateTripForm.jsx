@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createTripWithAi } from '../../../services/tripService';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createManualTrip, createTripWithAi } from '../../../services/tripService';
 import LoadingScreen from '../../../components/Dashboard/PlanItinerary/LoadingScreen';
 
 function App() {
@@ -21,6 +21,8 @@ function App() {
   const [collaboratorEmail, setCollaboratorEmail] = useState('');
   const [errors, setErrors] = useState({});
   const [emailError, setEmailError] = useState('');
+  const { method } = useParams(); // Extract the method (ai or manual) from the URL
+
 
   const preferences = [
     'history', 'food', 'adventure', 'relaxation', 'shopping',
@@ -131,15 +133,41 @@ function App() {
       
       setIsLoading(true);
       setApiError('');
+
       try {
-        const response = await createTripWithAi(formData);
-        // Redirect to itinerary page with tripId
-        navigate('/dashboard/itinerary', { state: { tripId: response.trip.id } });
+        if (method === 'ai') {
+          // Existing AI trip creation
+          console.log('ai');
+          
+          const response = await createTripWithAi(formData);
+          navigate('/dashboard/itinerary', { state: { tripId: response.trip.id } });
+        } else if (method === 'manual') {
+          console.log("manual");
+          
+          // New manual trip creation
+          const tripData = {
+            title: formData.title,
+            destination: formData.destination,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            people: formData.people,
+            budget: formData.budget,
+            preferences: formData.preferences,
+            collaborators: formData.collaborators.map(email => ({ email })), // Format collaborators
+          };
+          console.log("before");
+          
+          const response = await createManualTrip(tripData); // Call the new service method
+          console.log("before");
+          console.log('Recommended Spots:', response.spots); // Log the spots to the console
+          navigate('/dashboard/plan/manual/generate', { state: { tripData, spots:response.spots } });
+        }
       } catch (error) {
-        setApiError(error.message || 'Failed to create trip');
+        setApiError(error.response?.data?.message || 'Failed to create trip');
       } finally {
         setIsLoading(false);
       }
+
     }
   };
 
