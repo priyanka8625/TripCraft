@@ -149,8 +149,8 @@ public class TripController {
         } else {
             for (Collaborator collaborator : trip.getCollaborators()) {
             	
-            	Optional<User> user = userRepository.findByEmail(collaborator.getEmail());
-                user.ifPresent(value -> collaborator.setUserId(value.getId()));
+            	Optional<User> userCollab = userRepository.findByEmail(collaborator.getEmail());
+            	userCollab.ifPresent(value -> collaborator.setUserId(value.getId()));
 
                 String subject = "New Trip Added!";
                 String body = "Hi there!\r\n"
