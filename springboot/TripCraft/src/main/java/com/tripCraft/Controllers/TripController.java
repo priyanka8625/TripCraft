@@ -74,7 +74,7 @@ public class TripController {
 
     @Autowired
     private EmailSenderService emailSenderService;
-    @Value("${python.microservice.url:http://localhost:5000/similarity}")
+    @Value("${python.microservice.url:http://localhost:5000/generate_itinerary}")
     private String pythonMicroserviceUrl;
     
     List<String> imageUrls = Arrays.asList(
@@ -266,6 +266,7 @@ public class TripController {
                 newDestination.setDestination(trip.getDestination());
                 newDestination.setSpots(spots);
                 destinationRepository.save(newDestination);
+                System.out.println(spots);
             }
 
             // Step 5: Save Trip first to get its ID

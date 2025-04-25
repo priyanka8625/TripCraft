@@ -126,13 +126,13 @@ def convert_to_serializable(obj):
 def generate_itinerary(user_input):
     print(f"generate_itinerary: Input: {user_input}")
     try:
-        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
-        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
+        start_date = datetime.strptime(user_input["trip"]["startDate"], "%Y-%m-%d")
+        end_date = datetime.strptime(user_input["trip"]["endDate"], "%Y-%m-%d")
         days = (end_date - start_date).days + 1
-        people = int(user_input["people"])
-        budget = float(user_input["budget"])
-        destination = str(user_input["destination"])
-        preferences = [str(p) for p in user_input.get("preferences", [])]
+        people = int(user_input["trip"]["people"])
+        budget = float(user_input["trip"]["budget"])
+        destination = str(user_input["trip"]["destination"])
+        preferences = [str(p) for p in user_input["trip"].get("preferences", [])]
     except (KeyError, ValueError) as e:
         raise ValueError(f"Invalid input: {str(e)}")
 

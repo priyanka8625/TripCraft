@@ -80,11 +80,13 @@ public class SnapSafari {
     public static class Comment {
         private String userId;
         private String comment;
+        private String name; // New field for storing the user's name
 
         public Comment() {}
-        public Comment(String userId, String comment) {
+        public Comment(String userId, String name,String comment) {
             this.userId = userId;
             this.comment = comment;
+            this.name=name;
         }
 
         // Getters & Setters
@@ -99,6 +101,12 @@ public class SnapSafari {
         }
         public void setComment(String comment) {
             this.comment = comment;
+        }
+        public String getUserName() {
+            return name;
+        }
+        public void setUserName(String userName) {
+            this.name = userName;
         }
     }
 }
