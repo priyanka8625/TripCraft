@@ -1,1 +1,1 @@
-.env
+-e "__pycache__/\n.env\n.vscode/\n*.pyc\n*.log\nvenv/" 
