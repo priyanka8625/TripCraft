@@ -70,6 +70,7 @@ def generate_itinerary(user_input):
     except (KeyError, ValueError) as e:
         raise ValueError(f"Invalid input: {str(e)}")
 
+
     if days < 1 or people < 1 or budget < MINIMUM_BUDGET:
         raise ValueError("Invalid days, people, or budget")
 
