@@ -14,8 +14,8 @@ public class TripService {
 	@Autowired
     private  TripRepository tripRepository;
 	
-	public List<Trip> getTripsForLoggedInUser(String userId) {
-	    return tripRepository.findTripsSharedWithUser(userId);
+	public List<Trip> getTripsForLoggedInUser(String email) {
+	    return tripRepository.findTripsSharedWithUser(email);
 	}
 
 }

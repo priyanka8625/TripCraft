@@ -1,93 +1,75 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MainContent from '../../components/Dashboard/MainContent';
+import { getPostsByUserId } from '../../services/snapSafariService'; // Your existing service
+import { getRecentTrips, getUpcomingTrips } from '../../services/tripService';
+import { getUserProfile } from '../../services/userService';
 
 function Dashboard() {
-  const user = {
-    name: "Anni",
-    role: "Traveler Pro",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=128&h=128"
-  };
+  // State for all data
+  // const [user] = useState({
+  //   name: "Anni",
+  //   role: "Traveler Pro",
+  //   avatar: "./img/profile_pic.jpg"
+  // });
+  // Initialize user state as null or an empty object
+  const [user, setUser] = useState(null);
+  const [recentTrips, setRecentTrips] = useState([]);
+  const [upcomingTrips, setUpcomingTrips] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const recentTrips = [
-    {
-      thumbnail: './img/bbg1.jpg',
-      title: "Bali Adventure",
-      destination: "Bali, Indonesia",
-      people: 4,
-      budget: "₹19,600",
-      startDate: '2025-04-21',
-      endDate: '2025-04-21'
-    },
-    {
-      thumbnail: "./img/bbg2.jpg",
-      title: "Dubai Explorer",
-      destination: "Dubai, UAE",
-      people: 2,
-      budget: "₹21,700",
-      startDate: '2025-04-21',
-      endDate: '2025-04-21'
-    },
-    {
-      thumbnail: "./img/bbg3.jpg",
-      title: "Maldives Retreat",
-      destination: "Maldives",
-      people: 3,
-      budget: "₹11,300",
-      startDate: '2025-04-21',
-      endDate: '2025-04-21'
-    },
-    {
-      thumbnail: "./img/bbg4.jpg",
-      title: "Thailand Escape",
-      destination: "Phuket, Thailand",
-      people: 2,
-      budget: "₹15,400",
-      startDate: '2025-04-21',
-      endDate: '2025-04-21'
-    }
-  ];
+  // Fetch all data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-  const activities = [
-    {
-      image: "img/bbg1.jpg",
-      title: "Beach Paradise",
-      description: "Relaxing weekend at the most beautiful beach",
-      likes: 186,
-      comments: 32
-    },
-    {
-      image: "img/bbg2.jpg",
-      title: "Paris Wanderlust",
-      description: "Exploring the romantic streets of Paris",
-      likes: 324,
-      comments: 56
-    },
-    {
-      image: "img/bbg3.jpg",
-      title: "Island Hopping",
-      description: "Discovering hidden gems in the Pacific",
-      likes: 198,
-      comments: 28
-    }
-  ];
+        // Fetch user profile
+        // const userData = await getUserProfile();
+        setUser({
+          // name: userData?.name || 'Unknown User',
+          name: 'Priyanka',
+          role: 'Traveler',
+          avatar: './img/profile_pic.jpg' // Fallback avatar
+        });
+        
+        // Fetch activities (posts)
+        const postsData = await getPostsByUserId();
+        setActivities(postsData);
+        console.log("activities: ", postsData);
+        
 
-  const upcomingTrips = [
-    {
-      name: "Swiss Alps Tour",
-      destination: "Switzerland",
-      dates: "Mar 15 - Mar 25"
-    },
-    {
-      name: "Tokyo Adventure",
-      destination: "Japan",
-      dates: "Apr 10 - Apr 20"
-    },
-    {
-      name: "Greek Islands",
-      destination: "Greece",
-      dates: "May 5 - May 15"
-    }
-  ];
+        // Fetch recent trips
+        const recentTripsData = await getRecentTrips();
+        setRecentTrips(recentTripsData);
+        console.log("recent trips: ",recentTripsData);
+        
+
+        // Fetch upcoming trips
+        const upcomingTripsData = await getUpcomingTrips();
+        setUpcomingTrips(upcomingTripsData);
+        console.log("upcoming trips: ", upcomingTripsData);
+        
+
+      } catch (err) {
+        setError(err.message || 'Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Handle loading and error states
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <MainContent 

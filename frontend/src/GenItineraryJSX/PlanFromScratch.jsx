@@ -1,19 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   DndContext,
   MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
-} from "@dnd-kit/core";
-import { Sidebar } from "./planFromScratch/Sidebar";
-import { ItineraryDay } from "./planFromScratch/ItineraryDay";
-import { useItineraryStore } from "./store/itineraryStore";
-import { Calendar, Plus, Users } from "lucide-react";
-import { useLocation } from "react-router-dom";
+} from '@dnd-kit/core';
+import { Sidebar } from './planFromScratch/Sidebar';
+import { ItineraryDay } from './planFromScratch/ItineraryDay';
+import { useItineraryStore } from './store/itineraryStore';
+import { Calendar, Plus, Users, Save } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { createItinerary } from '../services/itineraryService';
+import toast from 'react-hot-toast';
 
 function PlanFromScratch() {
   const [showCollaboratorModal, setShowCollaboratorModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const {
     days,
     addDay,
@@ -28,59 +34,62 @@ function PlanFromScratch() {
     budget,
     suggestedPeople,
     setTitle,
-    setDates, // Use setDates instead of setStartDate and setEndDate
+    setDates,
     setBudget,
     setSuggestedPeople,
     setCollaborators,
+    getState,
   } = useItineraryStore();
 
   const location = useLocation();
-  // Initialize store and extract recommendations
   const [recommendations, setRecommendations] = useState([]);
+  const [tripId, setTripId] = useState(null);
 
-  // Initialize store with trip details from CreateTrip form (if available)
+  // Log location.state and tripId on mount
   useEffect(() => {
-    console.log("location.state:", location.state); // Debug state
+    console.log('[PlanFromScratch] location.state:', location.state);
     const tripData = location.state?.tripData;
     const spots = location.state?.spots;
-    console.log("tripData:", tripData); // Debug tripData
-    console.log("spots:", spots); // Debug spots
-    
+    setTripId(location.state?.tripId);
+    console.log('[PlanFromScratch] tripData:', tripData);
+    console.log('[PlanFromScratch] spots:', spots);
+    console.log('[PlanFromScratch] Setting tripId:', tripId);
+
     if (tripData) {
-      setTitle(tripData.title || "");
-      setDestination(tripData.destination || "");
-      setDates(tripData.startDate || "", tripData.endDate || ""); // Use setDates
+      setTitle(tripData.title || '');
+      setDestination(tripData.destination || '');
+      setDates(tripData.startDate || '', tripData.endDate || '');
       setBudget(tripData.budget || 0);
       setSuggestedPeople(tripData.people || 1);
       setCollaborators(tripData.collaborators || []);
-      // Assuming recommendations are passed in tripData.recommendations
       setRecommendations(spots || []);
 
-      // Ensure spots is an array and map if necessary
       if (Array.isArray(spots) && spots.length > 0) {
         const mappedSpots = spots.map((spot) => ({
-          id: spot.id || crypto.randomUUID(), // Ensure unique ID
-          category: spot.category || "unknown",
+          id: spot.id || crypto.randomUUID(),
+          category: spot.category || 'unknown',
           estimatedCost: spot.estimatedCost || 0,
           latitude: spot.latitude || 0,
-          location: spot.location || "Unknown",
+          location: spot.location || 'Unknown',
           longitude: spot.longitude || 0,
-          name: spot.name || "Unnamed Spot",
+          name: spot.name || 'Unnamed Spot',
           rating: spot.rating || 0,
-          timeSlot: spot.timeSlot || "Any",
+          timeSlot: spot.timeSlot || 'Any',
         }));
-        console.log("mappedSpots:", mappedSpots); // Debug mapped spots
+        console.log('[PlanFromScratch] mappedSpots:', mappedSpots);
         setRecommendations(mappedSpots);
       } else {
-        console.log("No valid spots found, setting recommendations to []");
+        console.log('[PlanFromScratch] No valid spots found, setting recommendations to []');
         setRecommendations([]);
       }
+    } else {
+      console.warn('[PlanFromScratch] No tripData found in location.state');
     }
   }, [
     location.state,
     setTitle,
     setDestination,
-    setDates, // Update dependency
+    setDates,
     setBudget,
     setSuggestedPeople,
     setCollaborators,
@@ -101,24 +110,43 @@ function PlanFromScratch() {
   );
 
   const handleDragEnd = (event) => {
+    console.log('[PlanFromScratch] DndContext onDragEnd:', event);
     const { active, over } = event;
-    if (!over) return;
-
-    if (active.id.toString().includes("template-")) {
-      const dayId = over.id.toString();
-      const place = active.data.current;
-
-      addItem(dayId, {
-        id: crypto.randomUUID(),
-        type: place.type,
-        title: place.title,
-        time: "12:00",
-        description: place.description,
-        location: place.location,
-        image: place.image,
-        duration: place.duration,
-        cost: place.cost,
-      });
+    if (over && active.data.current) {
+      const droppedItem = active.data.current;
+      const dayId = over.data.current?.dayId;
+      if (dayId) {
+        console.log('[PlanFromScratch] DndContext - Dropped item:', droppedItem);
+        console.log('[PlanFromScratch] DndContext - Dropped item keys:', Object.keys(droppedItem || {}));
+        console.log('[PlanFromScratch] DndContext - Dropped item fields:', {
+          name: droppedItem.name,
+          title: droppedItem.title,
+          category: droppedItem.category,
+          location: droppedItem.location,
+          estimatedCost: droppedItem.estimatedCost,
+          timeSlot: droppedItem.timeSlot,
+          rating: droppedItem.rating,
+          latitude: droppedItem.latitude,
+          longitude: droppedItem.longitude,
+        });
+        const newItem = {
+          id: `${droppedItem.id || 'unknown'}-${Date.now()}`,
+          name: droppedItem.name || droppedItem.title || 'Untitled',
+          category: droppedItem.category || droppedItem.type || 'unknown',
+          location: droppedItem.location || 'N/A',
+          estimatedCost: droppedItem.estimatedCost || droppedItem.cost || 0,
+          timeSlot: droppedItem.timeSlot || droppedItem.time || 'N/A',
+          rating: droppedItem.rating || 0,
+          latitude: droppedItem.latitude || null,
+          longitude: droppedItem.longitude || null,
+        };
+        console.log('[PlanFromScratch] DndContext - Normalized newItem:', newItem);
+        addItem(dayId, newItem);
+      } else {
+        console.warn('[PlanFromScratch] No dayId found in over.data.current:', over);
+      }
+    } else {
+      console.warn('[PlanFromScratch] Invalid drag end:', { active, over });
     }
   };
 
@@ -153,9 +181,64 @@ function PlanFromScratch() {
     return Math.max(0, diffDays + 1 - days.length);
   };
 
+  const handleSaveItinerary = async () => {
+    console.log('[PlanFromScratch] handleSaveItinerary called');
+    console.log('[PlanFromScratch] tripId:', tripId);
+    // console.log('[PlanFromScratch] Store state:', getState());
+
+    if (!tripId) {
+      console.warn('[PlanFromScratch] No tripId found');
+      setSaveError('No trip ID found. Please create a trip first.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const activities = days.flatMap((day, index) => {
+        const date = new Date(day.date);
+        if (isNaN(date.getTime())) {
+          console.warn(`[PlanFromScratch] Invalid date for day ${index + 1}:`, day.date);
+          return [];
+        }
+        const isoDate = date.toISOString();
+
+        return day.items.map((item) => ({
+          day: index + 1,
+          date: isoDate,
+          name: item.name || 'Untitled',
+          location: item.location || 'N/A',
+          time_slot: item.timeSlot || 'N/A',
+          estimated_cost: Number(item.estimatedCost) || 0,
+          rating: Number(item.rating) || 0,
+        }));
+      });
+
+      const itinerary = {
+        tripId: tripId,
+        activities,
+      };
+
+      console.log('[PlanFromScratch] Sending itinerary to backend:', itinerary);
+
+      const savedItinerary = await createItinerary(itinerary);
+      console.log('[PlanFromScratch] Backend response:', savedItinerary);
+      
+      setSaveSuccess(true);
+      toast.success('Itinerary saved successfully!');
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('[PlanFromScratch] Error saving itinerary:', error);
+      setSaveError(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const remainingDays = calculateRemainingDays();
   const tripDuration = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
-  const totalBudget = budget * suggestedPeople;
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -167,7 +250,7 @@ function PlanFromScratch() {
             </h2>
           </div>
           <div className="flex-1 overflow-auto">
-          <Sidebar recommendations={recommendations} />
+            <Sidebar recommendations={recommendations} />
           </div>
         </div>
         <div className="flex-1 flex flex-col">
@@ -175,13 +258,26 @@ function PlanFromScratch() {
             <div className="px-6 py-4">
               <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
-                <button
-                  onClick={() => setShowCollaboratorModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100"
-                >
-                  <Users className="w-5 h-5" />
-                  <span>Add Collaborator</span>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowCollaboratorModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100"
+                  >
+                    <Users className="w-5 h-5" />
+                    <span>Add Collaborator</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      console.log('[PlanFromScratch] Save button clicked');
+                      handleSaveItinerary();
+                    }}
+                    disabled={isSaving}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed transition-colors`}
+                  >
+                    <Save className="w-5 h-5" />
+                    <span>{isSaving ? 'Saving...' : 'Save Itinerary'}</span>
+                  </button>
+                </div>
               </div>
               <div className="mt-2">
                 <h2 className="text-xl">
@@ -210,7 +306,7 @@ function PlanFromScratch() {
                       Overall Budget
                     </h4>
                     <p className="mt-2 text-lg font-semibold">
-                      {totalBudget.toLocaleString()}
+                      {(budget * suggestedPeople).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -298,6 +394,17 @@ function PlanFromScratch() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div className="fixed top-4 right-4 bg-green-100 text-green-800 p-3 rounded-lg shadow">
+          Itinerary saved successfully!
+        </div>
+      )}
+      {saveError && (
+        <div className="fixed top-4 right-4 bg-red-100 text-red-800 p-3 rounded-lg shadow">
+          Error: {saveError}
         </div>
       )}
     </DndContext>
