@@ -55,17 +55,37 @@ def convert_to_serializable(data):
 def generate_itinerary(user_input):
     start_time = time.time()
     try:
-        start_date = datetime.strptime(user_input["trip"]["startDate"], "%Y-%m-%d")
-        end_date = datetime.strptime(user_input["trip"]["endDate"], "%Y-%m-%d")
+        # Log the incoming data to check the structure
+        print(f"Received input: {user_input}")
+        
+        # Access fields directly from user_input (no 'trip' nesting)
+        start_date = user_input.get("startDate")
+        end_date = user_input.get("endDate")
+        destination = user_input.get("destination")
+        people = int(user_input.get("people", 0))
+        budget = float(user_input.get("budget", 0))
+        preferences = user_input.get("preferences", [])
+        
+        # Validate startDate and endDate
+        if not start_date or not end_date:
+            raise ValueError("Missing 'startDate' or 'endDate' in the input.")
+        
+        start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        
         days = (end_date - start_date).days + 1
-        people = int(user_input["trip"]["people"])
-        budget = float(user_input["trip"]["budget"])
-        destination = user_input["trip"]["destination"]
-        preferences = user_input["trip"].get("preferences", [])
+
+        # Validate the required fields
+        if not destination:
+            raise ValueError("Missing 'destination' in the input.")
+        if people < 1 or budget < MINIMUM_BUDGET:
+            raise ValueError("Invalid number of people or budget.")
+
     except (KeyError, ValueError) as e:
+        # Improved error handling with clear message
+        print(f"Error: {str(e)}")
         raise ValueError(f"Invalid input: {str(e)}")
-
-
+    
     if days < 1 or people < 1 or budget < MINIMUM_BUDGET:
         raise ValueError("Invalid days, people, or budget")
 
