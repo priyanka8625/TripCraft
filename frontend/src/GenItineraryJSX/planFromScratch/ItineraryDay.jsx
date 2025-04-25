@@ -12,8 +12,13 @@ export const ItineraryDay = ({ day }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState(undefined);
   const { setNodeRef } = useDroppable({
-    id: day.id,
+    id: day?.id,
   });
+
+  if (!day || !day?.id) {
+    console.error('Invalid day object:', day);
+    return <div>Error: Invalid day data</div>; // Fallback UI
+  }
 
   const handleEdit = (item) => {
     setEditingItem(item);
