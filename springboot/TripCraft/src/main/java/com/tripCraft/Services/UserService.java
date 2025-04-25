@@ -53,45 +53,54 @@ public class UserService {
 
 
 
-    public ResponseEntity<Map<String, String>> verify(LoginRequest user) {
-        try {
-            Authentication authentication = authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
 
-            if (authentication.isAuthenticated()) {
-                // Generate the JWT token
-                String token = jwtService.generateToken(user.getEmail());
+public ResponseEntity<Map<String, String>> verify(LoginRequest user) {
+    try {
+        Authentication authentication = authManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
 
-                // Create secure cookie
-                ResponseCookie cookie = ResponseCookie.from("jwt", token)
-                        .httpOnly(true)
-                        .secure(false) // remove this in localhost if not using https
-                        .path("/")
-                        .maxAge(Duration.ofDays(7))
-                        .sameSite("Strict")
-                        .build();
+        if (authentication.isAuthenticated()) {
+            // Generate the JWT token
+            String token = jwtService.generateToken(user.getEmail());
 
-                // JSON response body
-                Map<String, String> responseBody = new HashMap<>();
-                responseBody.put("message", "Login successful");
-               System.out.println("token"+token);
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                        .body(responseBody);
-            } else {
-                Map<String, String> responseBody = new HashMap<>();
-                responseBody.put("message", "Authentication failed");
-               
-                System.out.println("error auth failed");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseBody);
-            }
-        } catch (Exception e) {
+            // Create secure cookie
+            ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                    .httpOnly(true)
+                    .secure(false) // remove this in localhost if not using https
+                    .path("/")
+                    .maxAge(Duration.ofDays(7))
+                    .sameSite("Strict")
+                    .build();
+
+            // 🔍 Fetch user's name
+            Optional<User> optionalUser = repo.findByEmail(user.getEmail());
+            String name = optionalUser.map(User::getName).orElse("User");
+
+            // ✅ JSON response with name
             Map<String, String> responseBody = new HashMap<>();
-            responseBody.put("message", "Internal server error: " + e.getMessage());
-            responseBody.put("status", "error");
-            System.out.println("error catch"+e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseBody);
+            responseBody.put("message", "Login successful");
+            responseBody.put("name", name);
+
+            System.out.println("token: " + token);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(responseBody);
+        } else {
+            Map<String, String> responseBody = new HashMap<>();
+            responseBody.put("message", "Authentication failed");
+
+            System.out.println("error: auth failed");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseBody);
         }
+    } catch (Exception e) {
+        Map<String, String> responseBody = new HashMap<>();
+        responseBody.put("message", "Internal server error: " + e.getMessage());
+        responseBody.put("status", "error");
+
+        System.out.println("error: " + e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseBody);
     }
+}
 
 }
