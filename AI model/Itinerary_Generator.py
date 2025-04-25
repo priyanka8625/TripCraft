@@ -30,11 +30,6 @@ def assign_time_slot(start_time, duration):
     return start_str, end_str
 
 def format_travel_duration(travel_time):
-    """
-    Formats the travel duration based on its length:
-    - If less than 1 hour, converts to minutes.
-    - If 1 hour or more, formats as "X hr Y min".
-    """
     if travel_time < 1:
         minutes = round(travel_time * 60)
         return minutes, "minutes"
@@ -60,13 +55,13 @@ def convert_to_serializable(data):
 def generate_itinerary(user_input):
     start_time = time.time()
     try:
-        start_date = datetime.strptime(user_input["startDate"], "%Y-%m-%d")
-        end_date = datetime.strptime(user_input["endDate"], "%Y-%m-%d")
+        start_date = datetime.strptime(user_input["trip"]["startDate"], "%Y-%m-%d")
+        end_date = datetime.strptime(user_input["trip"]["endDate"], "%Y-%m-%d")
         days = (end_date - start_date).days + 1
-        people = int(user_input["people"])
-        budget = float(user_input["budget"])
-        destination = user_input["destination"]
-        preferences = user_input.get("preferences", [])
+        people = int(user_input["trip"]["people"])
+        budget = float(user_input["trip"]["budget"])
+        destination = user_input["trip"]["destination"]
+        preferences = user_input["trip"].get("preferences", [])
     except (KeyError, ValueError) as e:
         raise ValueError(f"Invalid input: {str(e)}")
 
@@ -77,21 +72,17 @@ def generate_itinerary(user_input):
     daily_time_limit = MAX_HOURS_PER_DAY
 
     model = train_model()
-    cache = {}
 
-    # Fetch activities
     activities = find_similar_activities(destination, preferences, budget, people, days)
     if not activities:
         return {"activities": []}
 
-    # Filter valid activities with location data
     valid_activities = []
     locations = []
-    for idx, activity in enumerate(activities):
+    for activity in activities:
         lat = float(activity["activity"].get("latitude", 0))
         lon = float(activity["activity"].get("longitude", 0))
         if lat != 0 and lon != 0:
-            activity["id"] = idx
             valid_activities.append(activity)
             locations.append((lon, lat))
 
@@ -100,6 +91,13 @@ def generate_itinerary(user_input):
 
     # Fetch distance and time matrices
     distance_matrix, time_matrix = fetch_distance_matrix(locations)
+
+    # Assign matrix-safe indices
+    matrix_index_map = {}
+    for idx, activity in enumerate(valid_activities):
+        matrix_index_map[idx] = idx  # idx is safe for matrix use
+        activity["matrix_index"] = idx  # Use this instead of ID for matrices
+        activity["id"] = idx  # Retain for display
 
     # Cluster activities
     clusters = cluster_locations(distance_matrix, eps_km=20, min_samples=2)
@@ -110,6 +108,7 @@ def generate_itinerary(user_input):
             noise_activities.append(valid_activities[idx])
         else:
             cluster_dict.setdefault(cluster_id, []).append(valid_activities[idx])
+        valid_activities[idx]["cluster_id"] = cluster_id
 
     # Score activities
     X = preprocess_activities(valid_activities, daily_budget / people)
@@ -117,19 +116,18 @@ def generate_itinerary(user_input):
     for i, activity in enumerate(valid_activities):
         activity["score"] = float(scores[i])
 
-    # Generate itinerary with travel details
+    # Generate itinerary
     itinerary = []
     used_activities = set()
     for day in range(1, days + 1):
         daily_activities = [a for a in valid_activities if a["id"] not in used_activities]
         daily_activities.sort(key=lambda x: x["score"], reverse=True)
-        
+
         current_time = datetime.strptime("09:00", "%H:%M")
         daily_cost = 0.0
         daily_duration = 0.0
         daily_itinerary = []
 
-        # Select activities for the day
         for activity in daily_activities:
             cost = float(activity["activity"]["estimatedCost"]) * people
             duration = float(activity.get("duration", 2))
@@ -150,7 +148,8 @@ def generate_itinerary(user_input):
                     "name": activity["activity"]["name"],
                     "rating": float(activity["rating"]),
                     "time_slot": f"{start_str}-{end_str}",
-                    "activity_id": activity["id"]
+                    "activity_id": activity["id"],
+                    "matrix_index": activity["matrix_index"]
                 }
                 daily_itinerary.append(activity_entry)
                 used_activities.add(activity["id"])
@@ -158,35 +157,40 @@ def generate_itinerary(user_input):
                 daily_duration += duration
                 current_time += timedelta(hours=duration)
 
-        # Add travel between activities
+        # Add travel segments
         for i in range(len(daily_itinerary)):
             activity = daily_itinerary[i]
             itinerary.append(activity)
             if i < len(daily_itinerary) - 1:
                 next_activity = daily_itinerary[i + 1]
-                prev_idx = activity["activity_id"]
-                curr_idx = next_activity["activity_id"]
+                prev_idx = activity["matrix_index"]
+                curr_idx = next_activity["matrix_index"]
+
+                if prev_idx >= len(distance_matrix) or curr_idx >= len(distance_matrix):
+                    print(f"Skipping invalid matrix indices: {prev_idx}, {curr_idx}")
+                    continue
+
                 distance_km = round(distance_matrix[prev_idx][curr_idx])
-                travel_time = time_matrix[prev_idx][curr_idx]  # in hours
+                travel_time = time_matrix[prev_idx][curr_idx]
                 travel_cost = distance_km * TAXI_RATE * people
+
                 if distance_km == 0:
                     distance_km = 1
                 if travel_time == 0:
-                    travel_time = 0.25  # Assume 15 minutes minimum
-                
-                # Format travel duration
+                    travel_time = 0.25
+
                 formatted_duration, duration_unit = format_travel_duration(travel_time)
-                
                 start_str, end_str = assign_time_slot(current_time, travel_time)
+
                 travel_entry = {
                     "category": "Travel",
                     "cluster_id": activity.get("cluster_id", -1),
                     "date": (start_date + timedelta(days=day-1)).strftime("%Y-%m-%d"),
                     "day": day,
                     "distance": distance_km,
-                    "distanceUnit": "km",  # Added distance unit
-                    "duration": formatted_duration,  # Formatted duration
-                    "durationUnit": duration_unit,   # Updated duration unit
+                    "distanceUnit": "km",
+                    "duration": formatted_duration,
+                    "durationUnit": duration_unit,
                     "estimatedCost": travel_cost,
                     "index": len(itinerary),
                     "latitude": float(next_activity["latitude"]),
@@ -196,6 +200,7 @@ def generate_itinerary(user_input):
                     "rating": 0.0,
                     "time_slot": f"{start_str}-{end_str}"
                 }
+
                 itinerary.append(travel_entry)
                 current_time += timedelta(hours=travel_time)
                 daily_cost += travel_cost
@@ -203,4 +208,3 @@ def generate_itinerary(user_input):
 
     print(f"Generated itinerary in {time.time() - start_time:.2f}s")
     return convert_to_serializable({"activities": itinerary})
-
