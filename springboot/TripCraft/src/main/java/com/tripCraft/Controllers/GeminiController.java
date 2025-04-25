@@ -1,14 +1,12 @@
 package com.tripCraft.Controllers;
 
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tripCraft.Services.GeminiService;
-import com.tripCraft.model.ItineraryRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
@@ -17,16 +15,26 @@ public class GeminiController {
     @Autowired
     private GeminiService geminiService;
 
-    // Existing endpoint for itinerary generation
-    @PostMapping("/itinerary/generate")
-    public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
+    // Accept only destination and return tourist spots
+    @PostMapping("/spots/generate")
+    public ResponseEntity<?> generateDestinationData(@RequestBody String destination) {
         try {
-            String prompt = buildPrompt(request);
+            String prompt = buildSpotsPrompt(destination);
             String jsonResponse = geminiService.getGeminiResponse(prompt);
 
-            System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
+            System.out.println("Gemini Response (spots only): " + jsonResponse);
 
-            return ResponseEntity.ok().body(jsonResponse);
+            // Extract just the "spots" array
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(jsonResponse);
+            JsonNode spotsNode = rootNode.path("spots");
+
+            if (spotsNode.isMissingNode()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("{\"error\": \"Spots array not found in the response.\"}");
+            }
+
+            return ResponseEntity.ok(spotsNode);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -34,73 +42,32 @@ public class GeminiController {
         }
     }
 
-    // New endpoint for general chatbot interaction
-    @PostMapping("/chatbot/chat")
-    public ResponseEntity<?> chat(@RequestBody String userPrompt) {
-        try {
-            // Directly pass the user's prompt to GeminiService
-            String response = geminiService.getGeminiResponse(userPrompt);
-
-            System.out.println("Chatbot Response: " + response); // Debugging log
-
-            return ResponseEntity.ok().body(Map.of("message",response));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("{\"error\": \"" + e.getMessage() + "\"}");
-        }
-    }
-
-    // Existing method for building itinerary prompt
-    private String buildPrompt(ItineraryRequest request) {
+    private String buildSpotsPrompt(String destination) {
         return String.format("""
-            You are a smart travel planner. Based on the following travel plan:
-            {
-              "title": "Summer Vacation",
-              "destination": "%s",
-              "startDate": "%s",
-              "endDate": "%s",
-              "budget": %.2f,
-              "preferences": ["%s"],
-              "people": %d,
-              "collaborators": []
-            }
+            You are a travel expert. Provide a list of at least 25 unique tourist "spots" near or in %s.
+            Include a mix of:
+            - popular,
+            - offbeat,
+            - cultural,
+            - nature,
+            - adventure spots.
 
-            Generate a JSON itinerary with two parts:
-            1. "activities" – a list of daily travel activities, each with:
-               - day (number),
-               - date (yyyy-mm-dd),
-               - name (of the activity),
-               - location,
-               - timeSlot (e.g., Morning, Afternoon),
-               - estimatedCost (in INR)
-               - longitude
-               - latitude
-        	   - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
-               - rating (1 to 5),
-            2. "spots" –  Provide a rich list of **at least 25 unique tourist spots** near the destination. Include popular, offbeat, cultural, nature, and adventure spots.
-              - name,
-              - location,
-               - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
-               - rating (1 to 5),
-               - estimatedCost (approx. in INR),
-               - timeSlot
-        	   - longitude
-               - latitude
-            Make sure the response is in **pure JSON** format like:
+            Return only JSON with the key "spots" like:
             {
-              "activities": [ ... ],
-              "spots": [ ... ]
+              "spots": [
+                {
+                  "name": "",
+                  "location": "",
+                  "category": "",
+                  "rating": 0,
+                  "estimatedCost": 0,
+                  "timeSlot": "",
+                  "longitude": 0.0,
+                  "latitude": 0.0
+                },
+                ...
+              ]
             }
-            """,
-            request.destination(),
-            request.startDate(),
-            request.endDate(),
-            request.budget(),
-            request.interest(),
-            request.people()
-        );
+            """, destination);
     }
 }
-
-

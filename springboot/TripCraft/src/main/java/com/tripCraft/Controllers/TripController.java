@@ -9,6 +9,7 @@ import com.tripCraft.Services.TripService;
 import com.tripCraft.model.Activity;
 import com.tripCraft.model.Collaborator;
 import com.tripCraft.model.Destination;
+import com.tripCraft.model.Destination.Spot;
 import com.tripCraft.model.Itinerary;
 import com.tripCraft.model.ItineraryRequest;
 import com.tripCraft.model.Trip;
@@ -42,7 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -77,18 +78,16 @@ public class TripController {
     private String pythonMicroserviceUrl;
     
     List<String> imageUrls = Arrays.asList(
-    	    "https://asset.cloudinary.com/didg0xpge/3fb36016acff6b5759fbc5af70a461f5",
-    	    "https://asset.cloudinary.com/didg0xpge/3fb36016acff6b5759fbc5af70a461f5",
-    	    "https://asset.cloudinary.com/didg0xpge/3fb36016acff6b5759fbc5af70a461f5",
-    	    "https://asset.cloudinary.com/didg0xpge/1b4e0fac8fbef1eda483c895ec2ced7a",
-    	    "https://asset.cloudinary.com/didg0xpge/8b1876db93220edaf85e9992c71793a8",
-    	    "https://asset.cloudinary.com/didg0xpge/026d8f4f91f3e839e9d4877e51456217",
-    	    "https://asset.cloudinary.com/didg0xpge/23f267d0be91a17198a6ff06c29c9cb4",
-    	    "https://asset.cloudinary.com/didg0xpge/d09309971cc04990e49c5bfe3f496ced",
-    	    "https://asset.cloudinary.com/didg0xpge/d09309971cc04990e49c5bfe3f496ced",
-    	    "https://asset.cloudinary.com/didg0xpge/9fcdaa4a82d3dc556bc83e6a67d3a013",
-    	    "https://asset.cloudinary.com/didg0xpge/931d1157cad5074ab7e168bd80f503e1"
-    	);
+    		"http://res.cloudinary.com/didg0xpge/image/upload/v1745563965/rh62v2pkxe1iidaq51pp.jpg",
+    		 "http://res.cloudinary.com/didg0xpge/image/upload/v1745564280/thq60ytekuxokvhx1tfh.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564379/y3yzv80lqmzq0fgstn9f.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564411/nr9wvshaewcssiyldq1r.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564438/yotejrr4sp6zb6qa4byx.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564462/jh6vo0cyrbxuhb1hbboz.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564470/lco3idkoelc4rrhgld7t.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564485/gw9svacvp16jdnctkv8p.jpg",
+    	        "http://res.cloudinary.com/didg0xpge/image/upload/v1745564495/ruqiponckujq6o7l8czk.jpg"
+    	 );
 
     // ✅ Get all trips
     @GetMapping
@@ -232,183 +231,187 @@ public class TripController {
     
     @PostMapping
     public ResponseEntity<?> createTripAndItinerary(@RequestBody Trip trip) {
-        // Step 1: Set required fields
-    	String userId = getCurrentUserId();
-    	trip.setUserId(userId);
-        trip.setAiGenerated(true); // Set isAiGenerated to true as per requirement
-        trip.setStatus("Planned");
-        trip.setCreatedAt(LocalDateTime.now()); // Set current time
-        String randomThumbnail = imageUrls.get(new Random().nextInt(imageUrls.size()));
-        trip.setThumbnail(randomThumbnail);
-
-        // Step 2: Handle collaborators
-        if (trip.getCollaborators() == null || trip.getCollaborators().isEmpty()) {
-            // Keep as is (null or empty)
-        } else {
-            // Collaborators are already set in the request, no action needed
-        }
-
-        // Step 3: Check if destination exists in the database
-        boolean destinationExists = destinationRepository.existsByDestination(trip.getDestination());
-
-        // Step 4: Call appropriate service based on destination existence
-        Itinerary itinerary;
-        if (destinationExists) {
-            itinerary = callPythonMicroservice(trip);
-        } else {
-            itinerary = callGeminiService(trip);
-            
-        }
-
-        // Step 5: Save Trip first to get its ID
-        Trip savedTrip = tripRepository.save(trip);
-
-        // Step 6: Set tripId in Itinerary and save
-        itinerary.setTripId(savedTrip.getId());
-        Itinerary savedItinerary = itineraryRepository.save(itinerary);
-
-        // Step 7: Prepare response
-        TripResponse response = new TripResponse();
-        response.setTrip(savedTrip);
-        response.setItinerary(savedItinerary);
-
-        return ResponseEntity.ok(response);
-    }
-    private Itinerary callGeminiService(Trip trip) {
-        ItineraryRequest itineraryRequest = new ItineraryRequest(
-            trip.getDestination(),
-            1, // Default people
-            calculateDays(trip.getStartDate(), trip.getEndDate()),
-            trip.getStartDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getEndDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getBudget(),
-            "general" // Default interest
-        );
-
-        ResponseEntity<?> response = geminiController.generateItinerary(itineraryRequest);
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new RuntimeException("Failed to generate itinerary from Gemini: " + response.getBody());
-        }
-
-        String jsonResponse = (String) response.getBody();
         try {
-            // Clean the response to remove markdown backticks
-            String cleanedJson = cleanJsonResponse(jsonResponse);
+            // Step 1: Set required fields
+            String userId = getCurrentUserId();
+            trip.setUserId(userId);
+            trip.setAiGenerated(true);
+            trip.setStatus("Planned");
+            trip.setCreatedAt(LocalDateTime.now());
+            String randomThumbnail = imageUrls.get(new Random().nextInt(imageUrls.size()));
+            trip.setThumbnail(randomThumbnail);
 
-            // Extract and save spots into MongoDB
-            saveSpotsToMongo(cleanedJson, trip.getDestination());
-
-            // Convert entire JSON to Itinerary object
-            return objectMapper.readValue(cleanedJson, Itinerary.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage(), e);
-        }
-    }
-    private void saveSpotsToMongo(String cleanedJson, String destinationName) {
-        try {
-            JsonNode rootNode = objectMapper.readTree(cleanedJson);
-            JsonNode spotsNode = rootNode.get("spots");
-
-            if (spotsNode != null && spotsNode.isArray()) {
-                List<Destination.Spot> spots = new ArrayList<>();
-                for (JsonNode spotNode : spotsNode) {
-                    Destination.Spot spot = objectMapper.treeToValue(spotNode, Destination.Spot.class);
-                    spots.add(spot);
-                }
-
-                Destination destination = new Destination();
-                destination.setDestination(destinationName);
-                destination.setSpots(spots);
-                destinationRepository.save(destination);
+            // Step 2: Handle collaborators
+            if (trip.getCollaborators() != null && trip.getCollaborators().isEmpty()) {
+                trip.setCollaborators(null); // optional cleanup
             }
+
+            // Step 3: Check if destination exists
+            boolean destinationExists = destinationRepository.existsByDestination(trip.getDestination());
+
+            // Step 4: Call appropriate service
+            if (!destinationExists) {
+                List<Destination.Spot> spots = (List<Spot>) geminiController.generateDestinationData(trip.getDestination());
+
+                Destination newDestination = new Destination();
+                newDestination.setDestination(trip.getDestination());
+                newDestination.setSpots(spots);
+                destinationRepository.save(newDestination);
+            }
+
+            // Step 5: Save Trip first to get its ID
+            Trip savedTrip = tripRepository.save(trip);
+
+            // Step 6: Call Python microservice
+            ResponseEntity<?> itineraryResponse = callPythonMicroservice(savedTrip);
+
+            if (!itineraryResponse.getStatusCode().is2xxSuccessful()) {
+                return itineraryResponse; // forward error to frontend
+            }
+
+            Itinerary itinerary = (Itinerary) itineraryResponse.getBody();
+
+            // Step 7: Save Itinerary
+            itinerary.setTripId(savedTrip.getId());
+            Itinerary savedItinerary = itineraryRepository.save(itinerary);
+
+            // Step 8: Build final response
+            TripResponse response = new TripResponse();
+            response.setTrip(savedTrip);
+            response.setItinerary(savedItinerary);
+
+            return ResponseEntity.ok(response);
+
         } catch (Exception e) {
-            System.err.println("Failed to extract/save spots: " + e.getMessage());
-            // Don't stop the main flow even if spot saving fails
+            e.printStackTrace();
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Server error occurred while creating trip: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
-
- private String cleanJsonResponse(String response) {
-        // Remove markdown code blocks and extra whitespace
-        return response
-            .replaceAll("```json\\s*", "") // Remove ```json and any following whitespace
-            .replaceAll("```\\s*", "")     // Remove closing ```
-            .trim();                       // Remove leading/trailing whitespace
-    }
-    private int calculateDays(LocalDate startDate, LocalDate endDate) {
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
-    }
-
-    private Itinerary parsePythonResponse(String jsonResponse, String destination) throws Exception {
-        // Parse JSON response from Flask
-        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
-
-        // Check if there’s an error or no similar activities
-        if (responseMap.containsKey("error")) {
-            throw new RuntimeException("Python microservice error: " + responseMap.get("error"));
-        }
-
-        if (responseMap.containsKey("message") && responseMap.get("similar_activities") == null) {
-            // No matching activities found; return empty itinerary
-            Itinerary itinerary = new Itinerary();
-            itinerary.setActivities(List.of());
-            return itinerary;
-        }
-        List<Map<String, Object>> similarActivities = (List<Map<String, Object>>) responseMap.get("similar_activities");
-        List<Activity> activities = similarActivities.stream()
-            .map(activityMap -> {
-                Map<String, Object> activityDetails = (Map<String, Object>) activityMap.get("activity");
-                Activity activity = new Activity();
-                activity.setDay((Integer) activityDetails.get("day"));
-                activity.setDate(LocalDate.parse((String) activityDetails.get("date")));
-                activity.setName((String) activityDetails.get("name"));
-                activity.setLocation((String) activityDetails.get("location"));
-                 activity.setTimeSlot((String) activityDetails.get("timeSlot")); // Assuming Activity uses timeSlot
-                activity.setEstimatedCost(((Number) activityDetails.get("estimatedCost")).doubleValue());
-                return activity;
-            })
-            .toList();
-        Itinerary itinerary = new Itinerary();
-        itinerary.setActivities(activities);
-        return itinerary;
-    }
-    private Itinerary callPythonMicroservice(Trip trip) {
-        String flaskUrl = "http://localhost:5000/generate_itinerary";
-
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        ObjectNode json = objectMapper.createObjectNode();
-
-        json.put("destination", trip.getDestination());
-        json.put("budget", trip.getBudget());
-
-        int peopleCount = (trip.getCollaborators() != null ? trip.getCollaborators().size() : 0) + 1;
-        json.put("people", peopleCount);
-        json.put("startDate", trip.getStartDate().toString());
-        json.put("endDate", trip.getEndDate().toString());
-
-        if (trip.getPreferences() != null && !trip.getPreferences().isEmpty()) {
-            ArrayNode preferencesArray = objectMapper.valueToTree(trip.getPreferences());
-            json.set("preferences", preferencesArray);
-        }
-
-        HttpEntity<String> entity = new HttpEntity<>(json.toString(), headers);
-
+//    private Itinerary callGeminiService(Trip trip) {
+//        ItineraryRequest itineraryRequest = new ItineraryRequest(
+//            trip.getDestination(),
+//            1, // Default people
+//            calculateDays(trip.getStartDate(), trip.getEndDate()),
+//            trip.getStartDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
+//            trip.getEndDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
+//            trip.getBudget(),
+//            "general" // Default interest
+//        );
+//
+//        ResponseEntity<?> response = geminiController.generateItinerary(itineraryRequest);
+//        if (response.getStatusCode() != HttpStatus.OK) {
+//            throw new RuntimeException("Failed to generate itinerary from Gemini: " + response.getBody());
+//        }
+//
+//        String jsonResponse = (String) response.getBody();
+//        try {
+//            // Clean the response to remove markdown backticks
+//            String cleanedJson = cleanJsonResponse(jsonResponse);
+//
+//            // Extract and save spots into MongoDB
+//            saveSpotsToMongo(cleanedJson, trip.getDestination());
+//
+//            // Convert entire JSON to Itinerary object
+//            return objectMapper.readValue(cleanedJson, Itinerary.class);
+//        } catch (Exception e) {
+//            throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage(), e);
+//        }
+//    }
+//    private void saveSpotsToMongo(String cleanedJson, String destinationName) {
+//        try {
+//            JsonNode rootNode = objectMapper.readTree(cleanedJson);
+//            JsonNode spotsNode = rootNode.get("spots");
+//
+//            if (spotsNode != null && spotsNode.isArray()) {
+//                List<Destination.Spot> spots = new ArrayList<>();
+//                for (JsonNode spotNode : spotsNode) {
+//                    Destination.Spot spot = objectMapper.treeToValue(spotNode, Destination.Spot.class);
+//                    spots.add(spot);
+//                }
+//
+//                Destination destination = new Destination();
+//                destination.setDestination(destinationName);
+//                destination.setSpots(spots);
+//                destinationRepository.save(destination);
+//            }
+//        } catch (Exception e) {
+//            System.err.println("Failed to extract/save spots: " + e.getMessage());
+//            // Don't stop the main flow even if spot saving fails
+//        }
+//    }
+//
+// private String cleanJsonResponse(String response) {
+//        // Remove markdown code blocks and extra whitespace
+//        return response
+//            .replaceAll("```json\\s*", "") // Remove ```json and any following whitespace
+//            .replaceAll("```\\s*", "")     // Remove closing ```
+//            .trim();                       // Remove leading/trailing whitespace
+//    }
+//    private int calculateDays(LocalDate startDate, LocalDate endDate) {
+//        return (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
+//    }
+//
+//    private Itinerary parsePythonResponse(String jsonResponse, String destination) throws Exception {
+//        // Parse JSON response from Flask
+//        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+//
+//        // Check if there’s an error or no similar activities
+//        if (responseMap.containsKey("error")) {
+//            throw new RuntimeException("Python microservice error: " + responseMap.get("error"));
+//        }
+//
+//        if (responseMap.containsKey("message") && responseMap.get("similar_activities") == null) {
+//            // No matching activities found; return empty itinerary
+//            Itinerary itinerary = new Itinerary();
+//            itinerary.setActivities(List.of());
+//            return itinerary;
+//        }
+//        List<Map<String, Object>> similarActivities = (List<Map<String, Object>>) responseMap.get("similar_activities");
+//        List<Activity> activities = similarActivities.stream()
+//            .map(activityMap -> {
+//                Map<String, Object> activityDetails = (Map<String, Object>) activityMap.get("activity");
+//                Activity activity = new Activity();
+//                activity.setDay((Integer) activityDetails.get("day"));
+//                activity.setDate(LocalDate.parse((String) activityDetails.get("date")));
+//                activity.setName((String) activityDetails.get("name"));
+//                activity.setLocation((String) activityDetails.get("location"));
+//                 activity.setTimeSlot((String) activityDetails.get("timeSlot")); // Assuming Activity uses timeSlot
+//                activity.setEstimatedCost(((Number) activityDetails.get("estimatedCost")).doubleValue());
+//                return activity;
+//            })
+//            .toList();
+//        Itinerary itinerary = new Itinerary();
+//        itinerary.setActivities(activities);
+//        return itinerary;
+//    }
+    public ResponseEntity<?> callPythonMicroservice(Trip trip) {
         try {
+            ObjectNode requestJson = objectMapper.createObjectNode();
+            requestJson.set("trip", objectMapper.valueToTree(trip));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> request = new HttpEntity<>(requestJson.toString(), headers);
+
             ResponseEntity<Itinerary> response = restTemplate.exchange(
-                flaskUrl,
+                pythonMicroserviceUrl,
                 HttpMethod.POST,
-                entity,
+                request,
                 Itinerary.class
             );
 
-            return response.getBody();
-
+            return ResponseEntity.ok(response.getBody());
         } catch (Exception e) {
-            throw new RuntimeException("Error calling Python microservice: " + e.getMessage(), e);
+            e.printStackTrace();
+            // You can return a structured error message for frontend use
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error calling Python microservice: " + e.getMessage());
+
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(errorResponse);
         }
     }
-  
 }
