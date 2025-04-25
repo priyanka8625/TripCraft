@@ -26,10 +26,10 @@ function Dashboard() {
         setLoading(true);
 
         // Fetch user profile
-        // const userData = await getUserProfile();
+        const userData = await getUserProfile();
         setUser({
-          // name: userData?.name || 'Unknown User',
-          name: 'Priyanka',
+          name: userData?.name || 'Unknown User',
+          // name: 'Priyanka',
           role: 'Traveler',
           avatar: './img/profile_pic.jpg' // Fallback avatar
         });
