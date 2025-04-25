@@ -26,7 +26,7 @@ public class UserController {
     }
 
     // ✅ 1. Get User Profile by ID
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<?> getUserProfile() {
     	String userEmail = tripController.getCurrentUserId(); // Returns email, e.g., "test@example.com"
         Optional<User> userOptional = userRepo.findByEmail(userEmail);
