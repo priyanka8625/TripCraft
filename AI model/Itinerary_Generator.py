@@ -110,7 +110,6 @@ def preprocess_activities(activities, budget_per_person_per_day):
             "estimatedCost_normalized": cost / max_cost,
             "budget_per_person_per_day_normalized": budget_per_person_per_day / max_budget,
             "duration_normalized": duration / max_duration
-            "duration_normalized": duration / max_duration
         }
         for ts in valid_time_slots:
             record[f"timeSlot_{ts}"] = 1 if ts == time_slot else 0
