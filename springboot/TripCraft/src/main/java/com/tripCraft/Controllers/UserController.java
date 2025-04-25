@@ -7,6 +7,8 @@ import com.tripCraft.repository.UserRepo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -15,16 +17,28 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepo userRepo;
+    private final TripController tripController;
 
-    public UserController(UserService userService, UserRepo userRepo) {
+    public UserController(UserService userService, UserRepo userRepo, TripController tripController) {
         this.userService = userService;
         this.userRepo = userRepo;
+        this.tripController = tripController;
     }
 
     // ✅ 1. Get User Profile by ID
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserProfile(@PathVariable String id) {
-        Optional<User> user = userRepo.findById(id);
+    public ResponseEntity<?> getUserProfile() {
+    	String userEmail = tripController.getCurrentUserId(); // Returns email, e.g., "test@example.com"
+        Optional<User> userOptional = userRepo.findByEmail(userEmail);
+        if (!userOptional.isPresent()) {
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "User does not exist");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        User user_optional = userOptional.get();
+        String userId = user_optional.getId(); // Get the MongoDB _id (e.g., "user123")
+        Optional<User> user = userRepo.findById(userId);
         return user.map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
