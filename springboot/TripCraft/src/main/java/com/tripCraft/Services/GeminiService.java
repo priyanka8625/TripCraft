@@ -2,7 +2,11 @@ package com.tripCraft.Services;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -13,9 +17,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tripCraft.Controllers.GeminiController;
+import com.tripCraft.model.Activity;
+import com.tripCraft.model.Destination;
 import com.tripCraft.model.Itinerary;
 import com.tripCraft.model.ItineraryRequest;
 import com.tripCraft.model.Trip;
+import com.tripCraft.repository.DestinationRepository;
 @Service
 public class GeminiService {
 
@@ -24,8 +32,9 @@ public class GeminiService {
 
     @Value("${gemini.api.key}")
     private String apiKey;
-
-    private final RestTemplate restTemplate = new RestTemplate();
+    @Autowired
+	private DestinationRepository destinationRepository;
+       private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public String getGeminiResponse(String prompt) {
@@ -80,37 +89,5 @@ public class GeminiService {
             throw new RuntimeException("Error parsing response: " + e.getMessage(), e);
         }
     }
-    public  Itinerary callGeminiService(Trip trip) {
-        ItineraryRequest itineraryRequest = new ItineraryRequest(
-            trip.getDestination(),
-            1, // Default people
-            calculateDays(trip.getStartDate(), trip.getEndDate()),
-            trip.getStartDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getEndDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getBudget(),
-            "general" // Default interest
-        );
-
-        ResponseEntity<?> response = geminiController.generateItinerary(itineraryRequest);
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new RuntimeException("Failed to generate itinerary from Gemini: " + response.getBody());
-        }
-
-        String jsonResponse = (String) response.getBody();
-        try {
-            // Clean the response to remove markdown backticks
-            String cleanedJson = cleanJsonResponse(jsonResponse);
-
-            // Extract and save spots into MongoDB
-            saveSpotsToMongo(cleanedJson, trip.getDestination());
-
-            // Convert entire JSON to Itinerary object
-            return objectMapper.readValue(cleanedJson, Itinerary.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage(), e);
-        }
-    }
-    private int calculateDays(LocalDate startDate, LocalDate endDate) {
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
-    }
+  
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.tripCraft.model.AIActivity;
 import com.tripCraft.model.Activity;
 import com.tripCraft.model.Destination;
 import com.tripCraft.model.PythonItinerary;
@@ -100,22 +101,35 @@ public class PythonService {
         }
 
         List<Map<String, Object>> similarActivities = (List<Map<String, Object>>) responseMap.get("similar_activities");
-        List<Activity> activities = similarActivities.stream()
+        List<AIActivity> activities = similarActivities.stream()
             .map(activityMap -> {
                 Map<String, Object> activityDetails = (Map<String, Object>) activityMap.get("activity");
-                Activity activity = new Activity();
+                AIActivity activity = new AIActivity();
                 activity.setDay((Integer) activityDetails.get("day"));
                 activity.setDate(LocalDate.parse((String) activityDetails.get("date")));
                 activity.setName((String) activityDetails.get("name"));
                 activity.setLocation((String) activityDetails.get("location"));
                 activity.setTimeSlot((String) activityDetails.get("timeSlot"));
                 activity.setEstimatedCost(((Number) activityDetails.get("estimatedCost")).doubleValue());
+                // Assuming you need to populate additional fields from the JSON, you can set them here
+                // For example, if "category", "distance", "latitude" etc. are part of the activity details:
+                activity.setCategory((String) activityDetails.get("category"));
+                activity.setDistance(((Number) activityDetails.get("distance")).doubleValue());
+                activity.setDistanceUnit((String) activityDetails.get("distanceUnit"));
+                activity.setDuration(((Number) activityDetails.get("duration")).doubleValue());
+                activity.setDurationUnit((String) activityDetails.get("durationUnit"));
+                activity.setIndex((Integer) activityDetails.get("index"));
+                activity.setLatitude(((Number) activityDetails.get("latitude")).doubleValue());
+                activity.setLongitude(((Number) activityDetails.get("longitude")).doubleValue());
+                activity.setMatrixIndex((Integer) activityDetails.get("matrixIndex"));
+                activity.setRating(((Number) activityDetails.get("rating")).doubleValue());
                 return activity;
             })
             .toList();
 
         PythonItinerary itinerary = new PythonItinerary();
         itinerary.setActivities(activities);
+        itinerary.setDestination(destination); // Set destination if needed
         return itinerary;
     }
 

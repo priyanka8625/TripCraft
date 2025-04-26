@@ -1,14 +1,20 @@
 package com.tripCraft.model;
 
 import java.util.List;
-import java.util.Map;
 
 public class PythonItinerary {
     private String destination;
-    private List<String> days;
-    private Map<String, List<String>> itinerary;
+    private List<AIActivity> activities;
+    private String tripId;
+    public String getTripId() {
+		return tripId;
+	}
 
-    public String getDestination() {
+	public void setTripId(String tripId) {
+		this.tripId = tripId;
+	}
+
+	public String getDestination() {
         return destination;
     }
 
@@ -16,19 +22,11 @@ public class PythonItinerary {
         this.destination = destination;
     }
 
-    public List<String> getDays() {
-        return days;
+    public List<AIActivity> getActivities() {
+        return activities;
     }
 
-    public void setDays(List<String> days) {
-        this.days = days;
-    }
-
-    public Map<String, List<String>> getItinerary() {
-        return itinerary;
-    }
-
-    public void setItinerary(Map<String, List<String>> itinerary) {
-        this.itinerary = itinerary;
+    public void setActivities(List<AIActivity> activities) {
+        this.activities = activities;
     }
 }
