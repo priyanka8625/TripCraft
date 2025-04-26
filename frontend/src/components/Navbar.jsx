@@ -56,7 +56,7 @@ const Navbar = () => {
           </li>
           <li>
             <Link
-              to="/plan"
+              to="/dashboard/plan"
               className={`px-4 py-2 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
                 isScrolled
                   ? 'bg-emerald-600 text-white hover:bg-emerald-700'
