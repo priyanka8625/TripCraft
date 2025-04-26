@@ -116,6 +116,7 @@ function App() {
 
   const handleNext = () => {
     if (validateStep()) {
+      console.log('Moving to step', currentStep + 1); // Debug
       setCurrentStep(currentStep + 1);
       setApiError(''); // Clear API errors when moving to next step
     }
@@ -128,6 +129,10 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (currentStep !== 5) {
+      console.log('Submission blocked: Not on final step');
+      return;
+    }
     if (validateStep()) {
       console.log("data", formData);
       
@@ -196,7 +201,11 @@ function App() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form  onSubmit={(e) => {
+    e.preventDefault();
+    console.log('Unexpected form submission', { currentStep }); // Debug
+  }}
+  className="space-y-6">
           {apiError && (
             <div className="bg-red-50 text-red-700 p-4 rounded-xl">
               {apiError}
@@ -409,6 +418,10 @@ function App() {
             ) : (
               <button
                 type="submit"
+                onClick={(e) => {
+                  console.log('Create Itinerary button clicked'); // Debug
+                  handleSubmit(e); // Explicitly call to ensure submission
+                }}
                 className="px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors duration-200 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 ml-auto"
               >
                 Create Itinerary
