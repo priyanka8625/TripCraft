@@ -3,7 +3,7 @@ const Posts = () => {
   const posts = [
     {
       id: 1,
-      image: './bbg1.jpg', // Larger image
+      image: './img/bbg1.jpg', // Larger image
       title: 'ALASKA TRIP PLAN',
       author: 'John Doe',
       experience: 'A thrilling adventure through the icy peaks!',
@@ -13,7 +13,7 @@ const Posts = () => {
     },
     {
       id: 2,
-      image: './bbg2.jpg', // Larger image
+      image: './img/bbg2.jpg', // Larger image
       title: 'BRUCE FINKLEA',
       author: 'Bruce Finklea',
       experience: 'Scaling the toughest cliffs was unforgettable.',
@@ -23,7 +23,7 @@ const Posts = () => {
     },
     {
       id: 3,
-      image: './bbg3.jpg', // Smaller image
+      image: './img/bbg3.jpg', // Smaller image
       title: "New Zealand's Reflection Lake",
       author: 'Sarah Lee',
       experience: 'The waterfalls were breathtaking!',
@@ -33,7 +33,7 @@ const Posts = () => {
     },
     {
       id: 4,
-      image: './bbg4.jpg', // Smaller image
+      image: './img/bbg4.jpg', // Smaller image
       title: 'Smoky Mountains',
       author: 'Mike Brown',
       experience: 'Camping with friends, best memories!',
