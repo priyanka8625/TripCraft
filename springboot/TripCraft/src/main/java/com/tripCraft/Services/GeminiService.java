@@ -80,37 +80,5 @@ public class GeminiService {
             throw new RuntimeException("Error parsing response: " + e.getMessage(), e);
         }
     }
-    public  Itinerary callGeminiService(Trip trip) {
-        ItineraryRequest itineraryRequest = new ItineraryRequest(
-            trip.getDestination(),
-            1, // Default people
-            calculateDays(trip.getStartDate(), trip.getEndDate()),
-            trip.getStartDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getEndDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getBudget(),
-            "general" // Default interest
-        );
-
-        ResponseEntity<?> response = geminiController.generateItinerary(itineraryRequest);
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new RuntimeException("Failed to generate itinerary from Gemini: " + response.getBody());
-        }
-
-        String jsonResponse = (String) response.getBody();
-        try {
-            // Clean the response to remove markdown backticks
-            String cleanedJson = cleanJsonResponse(jsonResponse);
-
-            // Extract and save spots into MongoDB
-            saveSpotsToMongo(cleanedJson, trip.getDestination());
-
-            // Convert entire JSON to Itinerary object
-            return objectMapper.readValue(cleanedJson, Itinerary.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage(), e);
-        }
-    }
-    private int calculateDays(LocalDate startDate, LocalDate endDate) {
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
-    }
+    
 }

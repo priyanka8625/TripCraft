@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom'; // Add useNavigate
 import ActivityCard from '../../../components/Dashboard/PlanItinerary/ActivityCard.jsx';
 import MapComponent from '../../../components/Dashboard/PlanItinerary/MapComponent.jsx';
 import LoadingScreen from '../../../components/Dashboard/PlanItinerary/LoadingScreen.jsx';
@@ -12,9 +12,9 @@ export default function DisplayItinerary() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const location = useLocation();
+  const navigate = useNavigate(); // Initialize useNavigate
   const { tripId } = location.state || {};
-  const [focusedLocation, setFocusedLocation] = useState(null); // New state for focused location
-
+  const [focusedLocation, setFocusedLocation] = useState(null);
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -30,7 +30,6 @@ export default function DisplayItinerary() {
         const activities = data[0]?.activities;
         console.log(activities);
 
-        // Add check for undefined or empty activities
         if (!activities || activities.length === 0) {
           setError('No activities found for this trip. Please add activities to your itinerary.');
           setIsLoading(false);
@@ -63,7 +62,7 @@ export default function DisplayItinerary() {
           return acc;
         }, []);
 
-        // Ensure all days are filled (handle missing days)
+        // Ensure all days are filled
         const maxDay = Math.max(...activities.map(a => a.day));
         const filledDays = Array.from({ length: maxDay }, (_, i) => 
           grouped[i] || {
@@ -87,11 +86,38 @@ export default function DisplayItinerary() {
     setExpandedEvent(expandedEvent === index ? null : index);
   };
 
+  // Handle Edit button click
+  const handleEditItinerary = () => {
+    // Format activities to match PlanFromScratch expectations
+    const formattedActivities = tripDays.flatMap((day, index) =>
+      day.activities.map(activity => ({
+        id: `${activity.name}-${index}`, // Generate unique ID
+        name: activity.name,
+        category: activity.category || 'unknown',
+        location: activity.location || 'N/A',
+        estimatedCost: activity.estimated_cost || 0,
+        timeSlot: activity.time_slot || 'N/A',
+        rating: activity.rating || 0,
+        latitude: activity.coordinates.lat || 0,
+        longitude: activity.coordinates.lng || 0,
+      }))
+    );
+
+    // Navigate to PlanFromScratch with tripDays and tripId
+    navigate('/dashboard/plan/manual/generate', {
+      state: {
+        tripId,
+        tripData: location.state?.tripData, // Pass existing tripData if available
+        spots: formattedActivities, // Pass formatted activities as spots
+      },
+    });
+  };
+
   const currentActivities = tripDays.length > 0 ? tripDays[activeDay]?.activities || [] : [];
   const mappedLocations = currentActivities.map((activity) => ({
     name: activity.name,
     coordinates: [activity.coordinates.lat, activity.coordinates.lng],
-    rating: activity.rating
+    rating: activity.rating,
   }));
 
   if (isLoading) {
@@ -123,29 +149,34 @@ export default function DisplayItinerary() {
   return (
     <div className="w-full h-full overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 flex-1 flex flex-col h-full overflow-hidden">
-        {/* Day Tabs */}
-        <div className="flex flex-wrap gap-4 py-4 z-10 sticky top-0">
-          {tripDays.map((day, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveDay(index)}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 transform ${
-                activeDay === index
-                  ? 'bg-emerald-600 text-white shadow-lg scale-105'
-                  : 'bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:shadow-md hover:scale-102'
-              }`}
-            >
-              {day.date}
-            </button>
-          ))}
+        {/* Day Tabs and Edit Button */}
+        <div className="flex justify-between items-center py-4 z-10 sticky top-0">
+          <div className="flex flex-wrap gap-4">
+            {tripDays.map((day, index) => (
+              <button
+                key={index}
+                onClick={() => setActiveDay(index)}
+                className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 transform ${
+                  activeDay === index
+                    ? 'bg-emerald-600 text-white shadow-lg scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-emerald-50 hover:shadow-md hover:scale-102'
+                }`}
+              >
+                {day.date}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleEditItinerary}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 shadow-lg"
+          >
+            Edit Itinerary
+          </button>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8 flex-1 w-full overflow-hidden">
           {/* Activities */}
-          <div
-            className="lg:w-2/3 w-full overflow-y-auto"
-            style={{ maxHeight: '550px' }}
-          >
+          <div className="lg:w-2/3 w-full overflow-y-auto" style={{ maxHeight: '550px' }}>
             <div className="relative pl-12">
               <div className="absolute left-[12px] top-0 w-[2px] bg-emerald-600 h-full"></div>
               <div className="space-y-6">
@@ -167,10 +198,7 @@ export default function DisplayItinerary() {
 
           {/* Map */}
           <div className="lg:w-1/3 w-full">
-            <div
-              className="bg-white rounded-xl shadow-lg p-4"
-              style={{ height: '500px' }}
-            >
+            <div className="bg-white rounded-xl shadow-lg p-4" style={{ height: '500px' }}>
               <MapComponent locations={mappedLocations} focusedLocation={focusedLocation} />
             </div>
           </div>

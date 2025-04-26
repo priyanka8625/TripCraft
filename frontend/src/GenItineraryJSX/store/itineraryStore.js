@@ -91,4 +91,5 @@ export const useItineraryStore = create((set) => ({
     set(() => ({
       suggestedPeople,
     })),
+    setDays: (newDays) => set({ days: newDays }), // Add setDays
 }));

@@ -129,7 +129,7 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (currentStep !== 5) {
+    if (currentStep !== 4) {
       console.log('Submission blocked: Not on final step');
       return;
     }
@@ -186,7 +186,7 @@ function App() {
         <div className="mb-8">
           <div className="flex justify-between items-center relative">
             <div className="absolute h-1 bg-gray-200 top-1/2 -translate-y-1/2 left-0 right-0 z-0"></div>
-            {[1, 2, 3, 4, 5].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <div
                 key={step}
                 className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
@@ -353,7 +353,7 @@ function App() {
             </div>
           )}
 
-          {currentStep === 5 && (
+          {/* {currentStep === 5 && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -395,7 +395,7 @@ function App() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="flex justify-between mt-8">
             {currentStep > 1 && (
@@ -407,7 +407,7 @@ function App() {
                 Back
               </button>
             )}
-            {currentStep < 5 ? (
+            {currentStep < 4 ? (
               <button
                 type="button"
                 onClick={handleNext}
