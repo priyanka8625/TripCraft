@@ -89,5 +89,5 @@ public class GeminiService {
             throw new RuntimeException("Error parsing response: " + e.getMessage(), e);
         }
     }
-  
+
 }

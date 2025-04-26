@@ -6,7 +6,7 @@ const Reviews = () => {
   const navigate = useNavigate();
 
   const handleNavigation = () => {
-    navigate("/plan");
+    navigate("/dashboard/plan");
   };
 
   const reviews = [

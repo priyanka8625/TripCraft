@@ -116,6 +116,7 @@ function App() {
 
   const handleNext = () => {
     if (validateStep()) {
+      console.log('Moving to step', currentStep + 1); // Debug
       setCurrentStep(currentStep + 1);
       setApiError(''); // Clear API errors when moving to next step
     }
@@ -128,6 +129,10 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (currentStep !== 4) {
+      console.log('Submission blocked: Not on final step');
+      return;
+    }
     if (validateStep()) {
       console.log("data", formData);
       
@@ -181,7 +186,7 @@ function App() {
         <div className="mb-8">
           <div className="flex justify-between items-center relative">
             <div className="absolute h-1 bg-gray-200 top-1/2 -translate-y-1/2 left-0 right-0 z-0"></div>
-            {[1, 2, 3, 4, 5].map((step) => (
+            {[1, 2, 3, 4].map((step) => (
               <div
                 key={step}
                 className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
@@ -196,7 +201,11 @@ function App() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form  onSubmit={(e) => {
+    e.preventDefault();
+    console.log('Unexpected form submission', { currentStep }); // Debug
+  }}
+  className="space-y-6">
           {apiError && (
             <div className="bg-red-50 text-red-700 p-4 rounded-xl">
               {apiError}
@@ -344,7 +353,7 @@ function App() {
             </div>
           )}
 
-          {currentStep === 5 && (
+          {/* {currentStep === 5 && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -386,7 +395,7 @@ function App() {
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="flex justify-between mt-8">
             {currentStep > 1 && (
@@ -398,7 +407,7 @@ function App() {
                 Back
               </button>
             )}
-            {currentStep < 5 ? (
+            {currentStep < 4 ? (
               <button
                 type="button"
                 onClick={handleNext}
@@ -409,6 +418,10 @@ function App() {
             ) : (
               <button
                 type="submit"
+                onClick={(e) => {
+                  console.log('Create Itinerary button clicked'); // Debug
+                  handleSubmit(e); // Explicitly call to ensure submission
+                }}
                 className="px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors duration-200 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 ml-auto"
               >
                 Create Itinerary
