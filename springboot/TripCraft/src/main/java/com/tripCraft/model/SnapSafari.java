@@ -102,11 +102,11 @@ public class SnapSafari {
         public void setComment(String comment) {
             this.comment = comment;
         }
-        public String getUserName() {
+        public String getName() {
             return name;
         }
-        public void setUserName(String userName) {
-            this.name = userName;
+        public void setName(String name) {
+            this.name = name;
         }
     }
 }
