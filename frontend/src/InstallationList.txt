@@ -15,4 +15,5 @@ npm install @dnd-kit/sortable
 npm install @dnd-kit/core
 npm install uuid
 npm install zustand
+npm install react-icons
 npm run dev
