@@ -60,8 +60,8 @@ function PlanFromScratch() {
       setTitle(tripData.title || '');
       setDestination(tripData.destination || '');
       setDates(tripData.startDate || '', tripData.endDate || '');
-      setBudget(tripData.budget || 0);
-      setSuggestedPeople(tripData.people || 1);
+      setBudget(tripData.budget || 20000);
+      setSuggestedPeople(tripData.people || 2);
       setCollaborators(tripData.collaborators || []);
     }
 
