@@ -104,6 +104,8 @@ export default function DisplayItinerary() {
     );
 
     // Navigate to PlanFromScratch with tripDays and tripId
+    console.log("trip data: ",location.state?.tripData);
+    
     navigate('/dashboard/plan/manual/generate', {
       state: {
         tripId,
