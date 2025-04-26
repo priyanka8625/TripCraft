@@ -27,8 +27,16 @@ export default function DisplayItinerary() {
       try {
         setIsLoading(true);
         const data = await getItineraryWithTripId(tripId);
-        const activities = data[0].activities;
+        const activities = data[0]?.activities;
         console.log(activities);
+
+        // Add check for undefined or empty activities
+        if (!activities || activities.length === 0) {
+          setError('No activities found for this trip. Please add activities to your itinerary.');
+          setIsLoading(false);
+          return;
+        }
+
         // Group activities by day
         const grouped = activities.reduce((acc, activity) => {
           const dayIndex = activity.day - 1;
