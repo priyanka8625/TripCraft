@@ -31,7 +31,7 @@ def is_lunch_time_slot(time_slot):
     except ValueError:
         return False
 
-def suggest_hotels(activities, destination):
+def suggest_hotels(activities,user_input):
     """
     Generate hotel and lunch suggestions based on the list of activities for the given destination.
 
@@ -46,7 +46,16 @@ def suggest_hotels(activities, destination):
     client = MongoClient(MONGO_URI)
     db = client["TripCraft"]
     collection = db["destination"]
-
+    try:
+        start_date = datetime.strptime(user_input["trip"]["startDate"], "%Y-%m-%d")
+        end_date = datetime.strptime(user_input["trip"]["endDate"], "%Y-%m-%d")
+        days = (end_date - start_date).days + 1
+        people = int(user_input["trip"]["people"])
+        budget = float(user_input["trip"]["budget"])
+        destination = user_input["trip"]["destination"]
+        preferences = user_input["trip"].get("preferences", [])
+    except (KeyError, ValueError) as e:
+        raise ValueError(f"Invalid input: {str(e)}")
     # Fetch destination document
     destination_doc = collection.find_one({"destination": destination})
     if not destination_doc:
