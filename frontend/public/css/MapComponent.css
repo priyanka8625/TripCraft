@@ -1,14 +1,45 @@
-/* MapComponent.css */
-.custom-number-icon .numbered-marker {
-    background-color: #10b981; /* emerald-500 */
-    color: white;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    text-align: center;
-    line-height: 30px;
-    font-weight: bold;
-    border: 2px solid white;
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
-  }
-  
+/* Custom styles for map markers */
+.marker-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.marker-icon {
+  font-size: 20px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.marker-number {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #ffffff;
+  color: #000000;
+  font-size: 12px;
+  font-weight: bold;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #000000;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure no default styles interfere */
+.custom-marker-activity,
+.custom-marker-restaurant,
+.custom-marker-hotel {
+  background: none !important;
+  border: none !important;
+}

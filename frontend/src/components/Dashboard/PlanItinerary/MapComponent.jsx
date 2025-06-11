@@ -31,22 +31,47 @@ const MapComponent = ({ locations, focusedLocation }) => {
       />
 
       {locations.map((location, index) => {
-        const numberIcon = L.divIcon({
-          className: "custom-number-icon",
-          html: `<div class="numbered-marker">${index + 1}</div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 30],
-          popupAnchor: [0, -30],
+        // Determine icon and color based on location type
+        let markerIcon, markerColor;
+        switch (location.type) {
+          case 'activity':
+            markerIcon = '🗺️'; // Map pin icon for activities
+            markerColor = '#14B8A6'; // Teal to match ActivityCard
+            break;
+          case 'restaurant':
+            markerIcon = '🍴'; // Fork-knife icon for restaurants
+            markerColor = '#F97316'; // Orange to match RestaurantCard
+            break;
+          case 'hotel':
+            markerIcon = '🛏️'; // Bed icon for hotels
+            markerColor = '#8B5CF6'; // Purple to match HotelCard
+            break;
+          default:
+            markerIcon = '📍'; // Default pin icon
+            markerColor = '#6B7280'; // Gray as fallback
+        }
+
+        const customIcon = L.divIcon({
+          className: `custom-marker-${location.type}`,
+          html: `
+            <div class="marker-container" style="background-color: ${markerColor};">
+              <span class="marker-icon">${markerIcon}</span>
+              ${location.type === 'activity' ? `<span class="marker-number">${index + 1}</span>` : ''}
+            </div>
+          `,
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+          popupAnchor: [0, -40],
         });
 
         return (
           <Marker
             key={index}
             position={location.coordinates}
-            icon={numberIcon}
+            icon={customIcon}
           >
             <Popup>
-              <strong>{location.name}</strong>
+              <strong>{location.name}</strong><br />
               <strong>⭐ {location.rating}</strong>
             </Popup>
           </Marker>
