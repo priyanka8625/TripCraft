@@ -1,20 +1,24 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from Itinerary_Generator import generate_itinerary
 
-app = Flask(__name__)  # use __name__
+app = Flask(__name__)
 
-@app.route('/generate_itinerary', methods=['POST'])
+@app.route("/generate_itinerary", methods=["POST"], strict_slashes=False)
 def generate():
-    data = request.get_json()
     try:
         itinerary = generate_itinerary(data)
         return jsonify(itinerary)
     except Exception as e:
-        import traceback
-        print(f"Error in itinerary: {e}")
-        print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        print(f"Error in generate: {str(e)}")
+        return jsonify({"error": str(e)}), 400
 
-if __name__ == '__main__':  # use __name__ and '__main__'
-    print("Starting Flask server...")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+@app.teardown_appcontext
+def close_mongo_connection(exception):
+    if hasattr(g, 'mongo_client'):
+        g.mongo_client.close()
+        print("MongoDB connection closed")
+
+if __name__ == "__main__":
+    start_time = time.time()
+    serve(app, host='0.0.0.0', port=5000)
+    print(f"Waitress server started in {time.time() - start_time:.2f} seconds")

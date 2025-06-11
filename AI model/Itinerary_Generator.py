@@ -1,58 +1,93 @@
-import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from sklearn.cluster import DBSCAN
+import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+from datetime import datetime, timedelta
+import joblib
+import os
+from Similarity_Algorithm import find_similar_activities, compute_similarity, all_possible_tags, fetch_low_cost_activities
 import time
 from Similarity_Algorithm import find_similar_activities
 from route import fetch_distance_matrix, cluster_locations
 from hotel_suggestions import suggest_hotels
 
 
-# Constants
-MINIMUM_BUDGET = 100.0
-MAX_HOURS_PER_DAY = 10.0
-TAXI_RATE = 16.0  # INR per km per person
+# Valid time slots (kept for output but not constrained)
+valid_time_slots = ["morning", "afternoon", "evening", "daytime"]
 
-def train_model():
-    X_train = np.random.rand(100, 2)
-    y_train = np.random.rand(100)
-    model = RandomForestRegressor()
-    model.fit(X_train, y_train)
-    return model
+# Feature order for model
+FEATURE_ORDER = [
+    "similarity_score",
+    "rating_normalized",
+    "estimatedCost_normalized",
+    "budget_per_person_per_day_normalized",
+    "duration_normalized",
+    "timeSlot_morning",
+    "timeSlot_afternoon",
+    "timeSlot_evening",
+    "timeSlot_daytime"
+]
 
-def preprocess_activities(activities, budget_per_day):
-    X = np.array([[a["activity"]["estimatedCost"], a.get("duration", 2)] for a in activities])
-    return X
+def generate_training_data():
+    data = []
+    max_cost = 1000
+    max_budget = 1000
+    max_duration = 8
+    for _ in range(10000):
+        tags = np.random.choice(all_possible_tags, size=np.random.randint(1, 3), replace=False)
+        user_prefs = np.random.choice(all_possible_tags, size=np.random.randint(1, 3), replace=False)
+        cost = np.random.uniform(10, max_cost)
+        rating = np.random.uniform(1, 5)
+        time_slot = np.random.choice(valid_time_slots)
+        budget_per_person_per_day = np.random.uniform(50, max_budget)
+        duration = np.random.uniform(1, max_duration)
+        sim_score = compute_similarity(user_prefs, tags)
+        score = 0.9 if sim_score > 0.5 and cost < budget_per_person_per_day and 2 <= duration <= 8 else 0.2
+        record = {
+            "similarity_score": sim_score,
+            "rating_normalized": rating / 5,
+            "estimatedCost_normalized": cost / max_cost,
+            "budget_per_person_per_day_normalized": budget_per_person_per_day / max_budget,
+            "duration_normalized": duration / max_duration,
+            "relevance_score": score
+        }
+        for ts in valid_time_slots:
+            record[f"timeSlot_{ts}"] = 1 if ts == time_slot else 0
+        data.append(record)
+    return pd.DataFrame(data)
 
-def assign_time_slot(start_time, duration):
-    start_str = start_time.strftime("%H:%M")
-    end_time = start_time + timedelta(hours=duration)
-    end_str = end_time.strftime("%H:%M")
-    return start_str, end_str
 
-def format_travel_duration(travel_time):
-    if travel_time < 1:
-        minutes = round(travel_time * 60)
-        return minutes, "minutes"
-    else:
-        hours = int(travel_time)
-        minutes = round((travel_time - hours) * 60)
-        if minutes == 0:
-            return f"{hours} hr", "hours"
-        else:
-            return f"{hours} hr {minutes} min", "mixed"
-
-def convert_to_serializable(data):
-    if isinstance(data, dict):
-        return {k: convert_to_serializable(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [convert_to_serializable(item) for item in data]
-    elif isinstance(data, (np.integer, np.int64)):
-        return int(data)
-    elif isinstance(data, (np.floating, np.float64)):
-        return float(data)
-    return data
+def preprocess_activities(activities, budget_per_person_per_day):
+    data = []
+    max_cost = 1000
+    max_budget = 1000
+    max_duration = 8
+    for activity in activities:
+        time_slot = activity["activity"]["timeSlot"].lower() if "activity" in activity and "timeSlot" in activity["activity"] else "daytime"
+        if time_slot not in valid_time_slots:
+            time_slot = "daytime"
+        cost = activity["activity"]["estimatedCost"] if "activity" in activity and "estimatedCost" in activity["activity"] else 10.0
+        if not isinstance(cost, (int, float)):
+            print(f"Invalid estimatedCost for {activity.get('activity', {}).get('name', 'Unknown')}: {cost}, Type: {type(cost)}. Converting to float.")
+            try:
+                cost = float(cost)
+            except (ValueError, TypeError):
+                cost = 10.0
+        activity["activity"]["estimatedCost"] = cost
+        if "duration" not in activity:
+            activity["duration"] = 2  
+        duration = activity["duration"]
+        record = {
+            "similarity_score": activity.get("similarity_score", 0.0),
+            "rating_normalized": activity.get("rating", 0.0) / 5,
+            "estimatedCost_normalized": cost / max_cost,
+            "budget_per_person_per_day_normalized": budget_per_person_per_day / max_budget,
+            "duration_normalized": duration / max_duration
+        }
+        for ts in valid_time_slots:
+            record[f"timeSlot_{ts}"] = 1 if ts == time_slot else 0
+        data.append(record)
+    df = pd.DataFrame(data)[FEATURE_ORDER]
+    return df
 
 
 def format_travel_duration(travel_time):
@@ -82,6 +117,7 @@ def generate_itinerary(user_input):
     daily_budget = budget / days
     model = train_model()
     activities = find_similar_activities(destination, preferences, budget, people, days)
+    print(f"Activities fetched: {len(activities)} in {time.time() - start_time:.2f} seconds")
     if not activities:
         return {"itinerary": []}
 

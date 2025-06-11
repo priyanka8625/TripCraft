@@ -6,7 +6,7 @@ const Reviews = () => {
   const navigate = useNavigate();
 
   const handleNavigation = () => {
-    navigate("/plan");
+    navigate("/dashboard/plan");
   };
 
   const reviews = [
@@ -15,42 +15,42 @@ const Reviews = () => {
       location: "New York, USA",
       rating: 5,
       text: "TravelX transformed my vacation planning experience. The AI recommendations were spot-on! I was able to plan an entire trip within my budget and even discovered hidden gems I wouldn’t have found otherwise. The itinerary was flexible, and the expense tracker ensured I stayed on budget. Highly recommend!",
-      image: "./face.jpg"
+      image: "./img/face.jpg"
     },
     {
       name: "Michael Chen",
       location: "Singapore",
       rating: 5,
       text: "The local expertise feature connected me with amazing guides. Truly exceptional service! Not only did I get personalized recommendations, but the AI-driven insights helped me find the best flight deals and hotel stays. The interactive map feature was a game-changer, making navigation in a new city effortless. Can't wait to use it again!",
-      image: "./face.jpg"
+      image: "./img/face.jpg"
     },
     {
       name: "Emma Thompson",
       location: "London, UK",
       rating: 5,
       text: "24/7 support came in handy when I needed last-minute changes. Fantastic experience!",
-      image: "./face.jpg"
+      image: "./img/face.jpg"
     },
     {
       name: "Carlos Mendes",
       location: "Lisbon, Portugal",
       rating: 4,
       text: "Easy-to-use interface and great travel suggestions. Will use again!",
-      image: "./face.jpg"
+      image: "./img/face.jpg"
     },
     {
       name: "Ananya Patel",
       location: "Mumbai, India",
       rating: 5,
       text: "Loved the AI-driven budget tracking! Made my solo trip stress-free.",
-      image: "./face.jpg"
+      image: "./img/face.jpg"
     },
     {
       name: "James Robertson",
       location: "Sydney, Australia",
       rating: 4,
       text: "Good experience overall. Some minor improvements needed, but very helpful!",
-      image: "./face.jpg"
+      image: "./img/face.jpg"
     }
   ];
 

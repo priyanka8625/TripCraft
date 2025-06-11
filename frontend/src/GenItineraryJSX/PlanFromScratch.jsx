@@ -38,6 +38,7 @@ function PlanFromScratch() {
     setBudget,
     setSuggestedPeople,
     setCollaborators,
+    setDays, // Add setDays to update days state
     getState,
   } = useItineraryStore();
 
@@ -45,7 +46,7 @@ function PlanFromScratch() {
   const [recommendations, setRecommendations] = useState([]);
   const [tripId, setTripId] = useState(null);
 
-  // Log location.state and tripId on mount
+  // Initialize days with activities from location.state.spots
   useEffect(() => {
     console.log('[PlanFromScratch] location.state:', location.state);
     const tripData = location.state?.tripData;
@@ -59,31 +60,60 @@ function PlanFromScratch() {
       setTitle(tripData.title || '');
       setDestination(tripData.destination || '');
       setDates(tripData.startDate || '', tripData.endDate || '');
-      setBudget(tripData.budget || 0);
-      setSuggestedPeople(tripData.people || 1);
+      setBudget(tripData.budget || 20000);
+      setSuggestedPeople(tripData.people || 2);
       setCollaborators(tripData.collaborators || []);
-      setRecommendations(spots || []);
+    }
 
-      if (Array.isArray(spots) && spots.length > 0) {
-        const mappedSpots = spots.map((spot) => ({
+    // Initialize recommendations and days with spots
+    if (Array.isArray(spots) && spots.length > 0) {
+      const mappedSpots = spots.map((spot) => ({
+        id: spot.id || crypto.randomUUID(),
+        category: spot.category || 'unknown',
+        estimatedCost: spot.estimatedCost || 0,
+        latitude: spot.latitude || 0,
+        location: spot.location || 'Unknown',
+        longitude: spot.longitude || 0,
+        name: spot.name || 'Unnamed Spot',
+        rating: spot.rating || 0,
+        timeSlot: spot.timeSlot || 'Any',
+      }));
+      console.log('[PlanFromScratch] mappedSpots:', mappedSpots);
+      setRecommendations(mappedSpots);
+
+      // Group spots by day for days state
+      const groupedByDay = spots.reduce((acc, spot, index) => {
+        const dayIndex = Math.floor(index / 3); // Example: 3 activities per day
+        const date = tripData?.startDate
+          ? new Date(new Date(tripData.startDate).setDate(new Date(tripData.startDate).getDate() + dayIndex)).toLocaleDateString()
+          : `Day ${dayIndex + 1}`;
+        if (!acc[dayIndex]) {
+          acc[dayIndex] = {
+            id: crypto.randomUUID(),
+            date,
+            items: [],
+          };
+        }
+        acc[dayIndex].items.push({
           id: spot.id || crypto.randomUUID(),
-          category: spot.category || 'unknown',
-          estimatedCost: spot.estimatedCost || 0,
-          latitude: spot.latitude || 0,
-          location: spot.location || 'Unknown',
-          longitude: spot.longitude || 0,
           name: spot.name || 'Unnamed Spot',
-          rating: spot.rating || 0,
+          category: spot.category || 'unknown',
+          location: spot.location || 'N/A',
+          estimatedCost: spot.estimatedCost || 0,
           timeSlot: spot.timeSlot || 'Any',
-        }));
-        console.log('[PlanFromScratch] mappedSpots:', mappedSpots);
-        setRecommendations(mappedSpots);
-      } else {
-        console.log('[PlanFromScratch] No valid spots found, setting recommendations to []');
-        setRecommendations([]);
-      }
+          rating: spot.rating || 0,
+          latitude: spot.latitude || 0,
+          longitude: spot.longitude || 0,
+        });
+        return acc;
+      }, []);
+
+      const newDays = Object.values(groupedByDay);
+      console.log('[PlanFromScratch] Initializing days with spots:', newDays);
+      setDays(newDays); // Set days state with grouped activities
     } else {
-      console.warn('[PlanFromScratch] No tripData found in location.state');
+      console.log('[PlanFromScratch] No valid spots found, setting recommendations to []');
+      setRecommendations([]);
     }
   }, [
     location.state,
@@ -93,6 +123,8 @@ function PlanFromScratch() {
     setBudget,
     setSuggestedPeople,
     setCollaborators,
+    setDays,
+    location.state.tripData?.startDate,
   ]);
 
   const sensors = useSensors(
@@ -117,18 +149,6 @@ function PlanFromScratch() {
       const dayId = over.data.current?.dayId;
       if (dayId) {
         console.log('[PlanFromScratch] DndContext - Dropped item:', droppedItem);
-        console.log('[PlanFromScratch] DndContext - Dropped item keys:', Object.keys(droppedItem || {}));
-        console.log('[PlanFromScratch] DndContext - Dropped item fields:', {
-          name: droppedItem.name,
-          title: droppedItem.title,
-          category: droppedItem.category,
-          location: droppedItem.location,
-          estimatedCost: droppedItem.estimatedCost,
-          timeSlot: droppedItem.timeSlot,
-          rating: droppedItem.rating,
-          latitude: droppedItem.latitude,
-          longitude: droppedItem.longitude,
-        });
         const newItem = {
           id: `${droppedItem.id || 'unknown'}-${Date.now()}`,
           name: droppedItem.name || droppedItem.title || 'Untitled',
@@ -184,7 +204,6 @@ function PlanFromScratch() {
   const handleSaveItinerary = async () => {
     console.log('[PlanFromScratch] handleSaveItinerary called');
     console.log('[PlanFromScratch] tripId:', tripId);
-    // console.log('[PlanFromScratch] Store state:', getState());
 
     if (!tripId) {
       console.warn('[PlanFromScratch] No tripId found');
@@ -243,29 +262,32 @@ function PlanFromScratch() {
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex h-screen bg-gray-100">
-        <div className="w-72 bg-gray-50 flex flex-col">
-          <div className="p-3">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Recommended Activities
-            </h2>
+        {/* Conditionally render Sidebar */}
+        {recommendations.length > 0 && (
+          <div className="w-72 bg-gray-50 flex flex-col">
+            <div className="p-3">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Recommended Activities
+              </h2>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <Sidebar recommendations={recommendations} />
+            </div>
           </div>
-          <div className="flex-1 overflow-auto">
-            <Sidebar recommendations={recommendations} />
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col">
+        )}
+        <div className={`flex-1 flex flex-col ${recommendations.length === 0 ? 'w-full' : ''}`}>
           <div className="w-full bg-white">
             <div className="px-6 py-4">
               <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
                 <div className="flex gap-2">
-                  <button
+                  {/* <button
                     onClick={() => setShowCollaboratorModal(true)}
                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100"
                   >
                     <Users className="w-5 h-5" />
                     <span>Add Collaborator</span>
-                  </button>
+                  </button> */}
                   <button
                     onClick={() => {
                       console.log('[PlanFromScratch] Save button clicked');

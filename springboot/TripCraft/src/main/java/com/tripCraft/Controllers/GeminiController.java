@@ -1,12 +1,14 @@
 package com.tripCraft.Controllers;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tripCraft.Services.GeminiService;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.tripCraft.Services.GeminiService;
+import com.tripCraft.model.ItineraryRequest;
 
 @RestController
 @RequestMapping("/api")
@@ -15,105 +17,90 @@ public class GeminiController {
     @Autowired
     private GeminiService geminiService;
 
-    // Accept only destination and return tourist spots
-    @PostMapping("/spots/generate")
-    public ResponseEntity<?> generateDestinationData(@RequestBody String destination) {
-    	 try {
-             String prompt = buildSpotsPrompt(destination);
-             String jsonResponse = geminiService.getGeminiResponse(prompt);
+    // Existing endpoint for itinerary generation
+    @PostMapping("/itinerary/generate")
+    public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
+        try {
+            String prompt = buildPrompt(request);
+            String jsonResponse = geminiService.getGeminiResponse(prompt);
 
-             System.out.println("Gemini Response (spots + hotels): " + jsonResponse);
+            System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
 
-             ObjectMapper mapper = new ObjectMapper();
-             JsonNode rootNode = mapper.readTree(jsonResponse);
-
-             JsonNode spotsNode = rootNode.path("spots");
-             JsonNode hotelsNode = rootNode.path("hotels");
-
-             if (spotsNode.isMissingNode() || hotelsNode.isMissingNode()) {
-                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                         .body("{\"error\": \"Required data not found in response.\"}");
-             }
-
-             return ResponseEntity.ok(rootNode); // Send full JSON including both arrays
-         } catch (Exception e) {
-             e.printStackTrace();
-             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                     .body("{\"error\": \"" + e.getMessage() + "\"}");
-         }
+            return ResponseEntity.ok().body(jsonResponse);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
     }
 
-    private String buildSpotsPrompt(String destination) {
+    // New endpoint for general chatbot interaction
+    @PostMapping("/chatbot/chat")
+    public ResponseEntity<?> chat(@RequestBody String userPrompt) {
+        try {
+            // Directly pass the user's prompt to GeminiService
+            String response = geminiService.getGeminiResponse(userPrompt);
+
+            System.out.println("Chatbot Response: " + response); // Debugging log
+
+            return ResponseEntity.ok().body(Map.of("message",response));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
+    }
+
+    // Existing method for building itinerary prompt
+    private String buildPrompt(ItineraryRequest request) {
         return String.format("""
-            You are a smart travel planning assistant. Your job is to help plan a trip to the destination: %s.
-
-            You must return **only JSON** with exactly two keys:
-            - "spots": A list of at least 25 unique tourist spots in or near %s.
-            - "hotels": A total of 60 hotel/restaurants/lodges, categorized as follows:
-
-            -------------------
-            1. SPOTS FORMAT:
-            -------------------
-            Each spot must include:
+            You are a smart travel planner. Based on the following travel plan:
             {
-              "name": "",
-              "location": "",
-              "category": "", // popular, offbeat, cultural, nature, or adventure
-              "rating": 0.0,
-              "estimatedCost": 0,
-              "timeSlot": "",
-              "longitude": 0.0,
-              "latitude": 0.0
+              "title": "Summer Vacation",
+              "destination": "%s",
+              "startDate": "%s",
+              "endDate": "%s",
+              "budget": %.2f,
+              "preferences": ["%s"],
+              "people": %d,
+              "collaborators": []
             }
 
-            -------------------
-            2. HOTELS FORMAT:
-            -------------------
-            Provide exactly:
-            - 30 entries where `stayType` is "Lunch"
-            - 30 entries where `stayType` is "Dinner and Stay"
-
-            Within each group (Lunch / Dinner and Stay), include:
-            - 10 hotels with **low price**
-            - 10 hotels with **medium price**
-            - 10 hotels with **high price**
-
-            Hotel data format must match the stayType:
-
-            --- For Lunch ---
+            Generate a JSON itinerary with two parts:
+            1. "activities" – a list of daily travel activities, each with:
+               - day (number),
+               - date (yyyy-mm-dd),
+               - name (of the activity),
+               - location,
+               - timeSlot (e.g., Morning, Afternoon),
+               - estimatedCost (in INR)
+               - longitude
+               - latitude
+        	   - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
+               - rating (1 to 5),
+            2. "spots" –  Provide a rich list of **at least 25 unique tourist spots** near the destination. Include popular, offbeat, cultural, nature, and adventure spots.
+              - name,
+              - location,
+               - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
+               - rating (1 to 5),
+               - estimatedCost (approx. in INR),
+               - timeSlot
+        	   - longitude
+               - latitude
+            Make sure the response is in **pure JSON** format like:
             {
-              "name": "",
-              "location": "",
-              "category": "", // eg. restaurant, café
-              "rating": 0.0,
-              "pricePerPerson": 0,
-              "stayType": "Lunch",
-              "longitude": 0.0,
-              "latitude": 0.0,
-              "nearbySpot": ""
+              "activities": [ ... ],
+              "spots": [ ... ]
             }
-
-            --- For Dinner and Stay ---
-            {
-              "name": "",
-              "location": "",
-              "category": "", // eg. hotel, lodge, resort
-              "rating": 0.0,
-              "pricePerNight": 0,
-              "stayType": "Dinner and Stay",
-              "longitude": 0.0,
-              "latitude": 0.0,
-              "nearbySpot": ""
-            }
-
-            -------------------
-            IMPORTANT RULES:
-            -------------------
-            - Do not return any explanation or extra text. Only valid JSON.
-            - Use realistic locations and GPS coordinates.
-            - Ensure each hotel references a tourist spot from the "spots" list using "nearbySpot".
-            - Sort prices in each group (Lunch / Dinner and Stay) from low to high.
-            """, destination, destination);
+            """,
+            request.destination(),
+            request.startDate(),
+            request.endDate(),
+            request.budget(),
+            request.interest(),
+            request.people()
+        );
     }
-
 }
+
+
