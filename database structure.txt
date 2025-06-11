@@ -36,18 +36,18 @@ Itinerary Collection
 	    "date":ISODate("2024-06-10"),
             "name": "Visit Eiffel Tower",
             "location": "Paris, France",
-	    "image": "url",
             "time_slot": "10:00 AM - 12:00 PM",
-            "estimated_cost": 20.00
+            "estimated_cost": 20.00,
+rating
         },
         {
 	    "day": 1,
 	    "date":ISODate("2024-06-10"),
             "name": "Lunch at Le Jules Verne",
             "location": "Eiffel Tower",
-	    "image": "url"
             "time_slot": "12:30 PM - 2:00 PM",
-            "estimated_cost": 100.00
+            "estimated_cost": 100.00,
+rating
         }
     ]
 }
