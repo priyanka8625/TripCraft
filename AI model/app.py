@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from Itinerary_Generator import generate_itinerary
-from hotel_suggestions import suggest_hotels
 
 app = Flask(__name__)  # use __name__
 
@@ -8,20 +7,8 @@ app = Flask(__name__)  # use __name__
 def generate():
     data = request.get_json()
     try:
-        # 1. Generate the itinerary
         itinerary = generate_itinerary(data)
-
-        # 2. Get destination and suggest hotels/hostels
-        destination = data["destination"]
-        # assume suggest_hotels takes (activities, destination)
-        suggestions = suggest_hotels(itinerary["activities"], destination)
-
-        # 3. Return both in a single JSON response
-        return jsonify({
-            "itinerary": itinerary,
-            "suggestions": suggestions
-        })
-
+        return jsonify(itinerary)
     except Exception as e:
         import traceback
         print(f"Error in itinerary: {e}")
