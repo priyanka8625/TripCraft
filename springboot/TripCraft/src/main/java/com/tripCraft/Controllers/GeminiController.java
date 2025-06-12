@@ -18,21 +18,21 @@ public class GeminiController {
     private GeminiService geminiService;
 
     // Existing endpoint for itinerary generation
-    @PostMapping("/itinerary/generate")
-    public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
-        try {
-            String prompt = buildPrompt(request);
-            String jsonResponse = geminiService.getGeminiResponse(prompt);
-
-            System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
-
-            return ResponseEntity.ok().body(jsonResponse);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("{\"error\": \"" + e.getMessage() + "\"}");
-        }
-    }
+//    @PostMapping("/itinerary/generate")
+//    public ResponseEntity<?> generateItinerary(@RequestBody ItineraryRequest request) {
+//        try {
+//            String prompt = buildPrompt(request);
+//            String jsonResponse = geminiService.getGeminiResponse(prompt);
+//
+//            System.out.println("Generated JSON Response: " + jsonResponse); // Debugging log
+//
+//            return ResponseEntity.ok().body(jsonResponse);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                    .body("{\"error\": \"" + e.getMessage() + "\"}");
+//        }
+//    }
 
     // New endpoint for general chatbot interaction
     @PostMapping("/chatbot/chat")
@@ -50,57 +50,19 @@ public class GeminiController {
                     .body("{\"error\": \"" + e.getMessage() + "\"}");
         }
     }
-
-    // Existing method for building itinerary prompt
-    private String buildPrompt(ItineraryRequest request) {
-        return String.format("""
-            You are a smart travel planner. Based on the following travel plan:
-            {
-              "title": "Summer Vacation",
-              "destination": "%s",
-              "startDate": "%s",
-              "endDate": "%s",
-              "budget": %.2f,
-              "preferences": ["%s"],
-              "people": %d,
-              "collaborators": []
-            }
-
-            Generate a JSON itinerary with two parts:
-            1. "activities" – a list of daily travel activities, each with:
-               - day (number),
-               - date (yyyy-mm-dd),
-               - name (of the activity),
-               - location,
-               - timeSlot (e.g., Morning, Afternoon),
-               - estimatedCost (in INR)
-               - longitude
-               - latitude
-        	   - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
-               - rating (1 to 5),
-            2. "spots" –  Provide a rich list of **at least 25 unique tourist spots** near the destination. Include popular, offbeat, cultural, nature, and adventure spots.
-              - name,
-              - location,
-               - category (e.g.,history,food,relaxation,adventure,nightlife,art,spiritual, nature, cultural, shopping),
-               - rating (1 to 5),
-               - estimatedCost (approx. in INR),
-               - timeSlot
-        	   - longitude
-               - latitude
-            Make sure the response is in **pure JSON** format like:
-            {
-              "activities": [ ... ],
-              "spots": [ ... ]
-            }
-            """,
-            request.destination(),
-            request.startDate(),
-            request.endDate(),
-            request.budget(),
-            request.interest(),
-            request.people()
-        );
+    @PostMapping("/generateSpotsAndHotels")
+    public ResponseEntity<String> generateSpotsAndHotels(@RequestParam String destination) {
+        try {
+            String prompt = geminiService.buildPrompt(destination);
+            String response = geminiService.getGeminiResponse(prompt);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                 .body("Error generating spots and hotels: " + e.getMessage());
+        }
     }
+
+ 
 }
 
 

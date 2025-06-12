@@ -32,10 +32,54 @@ public class GeminiService {
 
     @Value("${gemini.api.key}")
     private String apiKey;
-    @Autowired
-	private DestinationRepository destinationRepository;
        private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Existing method for building itinerary prompt
+    public String buildPrompt(String destination) {
+        return String.format("""
+            You are a smart travel planner.
+
+            Based only on the following destination:
+            {
+              "destination": "%s"
+            }
+
+            Generate a JSON response with exactly two arrays:
+
+            1. "spots" – Include **all possible unique tourist spots** in and around the destination, covering:
+               - name
+               - location
+               - category (e.g., history, food, relaxation, adventure, nightlife, art, spiritual, nature, cultural, shopping)
+               - rating (1 to 5)
+               - estimatedCost (approx. in INR)
+               - timeSlot (in format "HH:MM-HH:MM")
+               - longitude
+               - latitude
+
+            2. "hotels" – Include a range of hotels from low to high budget near the above spots. For each hotel, provide:
+               - name
+               - location
+               - category (e.g., Luxury, Budget, Casual Dining)
+               - rating (1 to 5)
+               - pricePerNight (in INR)
+               - stayType ("Stay" for accommodations, "Lunch" for dining)
+               - longitude
+               - latitude
+               - nearbySpot (mention the closest tourist spot name)
+
+            Notes:
+            - Make sure all tourist spots listed are unique and exhaustive for the destination.
+            - Ensure hotels are relevant to nearby spots and represent all budget levels.
+            - Output only in valid **pure JSON** format like:
+            {
+              "spots": [ ... ],
+              "hotels": [ ... ]
+            }
+            """,
+            destination
+        );
+    }
 
     public String getGeminiResponse(String prompt) {
         HttpHeaders headers = new HttpHeaders();

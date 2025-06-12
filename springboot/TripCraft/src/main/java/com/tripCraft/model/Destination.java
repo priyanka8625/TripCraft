@@ -10,46 +10,31 @@ public class Destination {
 
     @Id
     private String id;
-
-    public String getId() {
-		return id;
-	}
-
-
-	public void setId(String id) {
-		this.id = id;
-	}
-
-
-	public String getDestination() {
-		return destination;
-	}
-
-
-	public void setDestination(String destination) {
-		this.destination = destination;
-	}
-
-
-	public List<Spot> getSpots() {
-		return spots;
-	}
-
-
-	public void setSpots(List<Spot> spots) {
-		this.spots = spots;
-	}
-
-
-	private String destination;
+    private String destination;
     private List<Spot> spots;
 
     private List<Hotel> hotels;
     public List<Hotel> getHotels() {
 		return hotels;
 	}
-
-
+    public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public String getDestination() {
+		return destination;
+	}
+	public void setDestination(String destination) {
+		this.destination = destination;
+	}
+	public List<Spot> getSpots() {
+		return spots;
+	}
+	public void setSpots(List<Spot> spots) {
+		this.spots = spots;
+	}
 	public void setHotels(List<Hotel> hotels) {
 		this.hotels = hotels;
 	}
@@ -184,9 +169,6 @@ public class Destination {
     				+ ", latitude=" + latitude + ", nearbySpot=" + nearbySpot + "]";
     	}
 
-        // Getters and Setters
-        // Constructors
-        // toString()
     }
 
 }

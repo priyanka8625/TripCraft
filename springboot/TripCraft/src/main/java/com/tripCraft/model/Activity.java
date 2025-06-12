@@ -1,35 +1,39 @@
 package com.tripCraft.model;
 
-import java.time.LocalDate;
 
 public class Activity {
-    private int day;
-    private LocalDate date;
+   
     private String category;
     private double rating;
     private String name;
     private String location;
     private String timeSlot;
     private double estimatedCost;
+    private int distance;
+    private String duration;
+   
+    
+    
+    public int getDistance() {
+		return distance;
+	}
+	public void setDistance(int distance) {
+		this.distance = distance;
+	}
+	
+	public String getDuration() {
+		return duration;
+	}
+	public void setDuration(String duration) {
+		this.duration = duration;
+	}
 
-    // New fields for location coordinates
+	// New fields for location coordinates
     private double longitude;
     private double latitude;
 
     // Getters and Setters
-    public int getDay() {
-        return day;
-    }
-    public void setDay(int day) {
-        this.day = day;
-    }
-
-    public LocalDate getDate() {
-        return date;
-    }
-    public void setDate(LocalDate date) {
-        this.date = date;
-    }
+    
 
     public String getCategory() {
         return category;
