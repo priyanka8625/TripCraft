@@ -91,7 +91,7 @@ export default function DisplayItinerary() {
         // Assuming the response is an array of itinerary days (matching your backend response structure)
         setTripDays(data.itinerary || []);
         //if data is of the older format
-        if(!data.activities)
+        if(data.activities)
           setTripDays(itineraryData.itinerary);//set demo data
       } catch (err) {
         setError(err.message || 'Error fetching itinerary');
