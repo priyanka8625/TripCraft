@@ -89,6 +89,7 @@ public class TripController {
     @GetMapping
     public ResponseEntity<?> getUserTrips() {
         String userId = getCurrentUserId(); // from token/session
+        System.out.println("UserId"+userId);
         List<Trip> trips = tripService.getTripsForLoggedInUser(userId);
         return ResponseEntity.ok(trips);
     }

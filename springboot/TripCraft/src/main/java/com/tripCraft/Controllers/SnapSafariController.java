@@ -58,7 +58,7 @@ public class SnapSafariController {
 
             User user = userOptional.get();
             String userId = user.getId(); // Get the MongoDB _id (e.g., "user123")
-
+            String name=user.getName();
             List<String> imageUrls = new ArrayList<>();
             for (MultipartFile file : imageFiles) {
                 String imageUrl = imageUploadService.uploadImage(file);
@@ -73,7 +73,7 @@ public class SnapSafariController {
             post.setImages(imageUrls);
             post.setCreatedAt(LocalDateTime.now());
             post.setLikes(0);
-
+            post.setName(name);
             return ResponseEntity.ok().body(snapSafariRepository.save(post));
         } catch (IllegalStateException e) {
             Map<String, String> response = new HashMap<>();

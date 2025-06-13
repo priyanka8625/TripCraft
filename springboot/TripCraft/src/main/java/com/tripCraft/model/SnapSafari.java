@@ -11,6 +11,14 @@ public class SnapSafari {
     @Id
     private String id;
     private String userId;
+    private String name;
+	
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
 
 	private String destination;
     private String title;
@@ -20,7 +28,25 @@ public class SnapSafari {
     private List<Comment> comments;
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    public String getId() {
+    public SnapSafari(String id, String userId, String name, String destination, String title, String caption,
+			List<String> images, int likes, List<Comment> comments, LocalDateTime createdAt) {
+		super();
+		this.id = id;
+		this.userId = userId;
+		this.name = name;
+		this.destination = destination;
+		this.title = title;
+		this.caption = caption;
+		this.images = images;
+		this.likes = likes;
+		this.comments = comments;
+		this.createdAt = createdAt;
+	}
+    public SnapSafari() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public String getId() {
 		return id;
 	}
 	public void setId(String id) {
