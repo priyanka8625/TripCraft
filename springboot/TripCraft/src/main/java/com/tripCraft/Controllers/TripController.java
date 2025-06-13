@@ -245,25 +245,21 @@ public class TripController {
         String randomThumbnail = imageUrls.get(new Random().nextInt(imageUrls.size()));
         trip.setThumbnail(randomThumbnail);
 
-        // Step 2: Handle collaborators
-        if (trip.getCollaborators() == null || trip.getCollaborators().isEmpty()) {
-            // Keep as is (null or empty)
-        } else {
-            // Collaborators are already set in the request, no action needed
+        if (trip.getCollaborators() == null) {
+            trip.setCollaborators(new ArrayList<>());
         }
-
         // Step 3: Check if destination exists in the database
         boolean destinationExists = destinationRepository.existsByDestination(trip.getDestination());
 
         // Step 4: Call appropriate service based on destination existence
         Itinerary itinerary;
-        if (destinationExists) {
-            itinerary = callPythonMicroservice(trip);
-        } else {
-            itinerary = callGeminiService(trip);
-            
+        Destination destination;
+        if (!destinationExists) {
+        	destination = callGeminiService(trip.getDestination());
+        	System.out.println("Gemini response "+destination);
         }
-
+        itinerary = callPythonMicroservice(trip);
+        System.out.println("model response "+itinerary);
         // Step 5: Save Trip first to get its ID
         Trip savedTrip = tripRepository.save(trip);
 
@@ -278,103 +274,60 @@ public class TripController {
 
         return ResponseEntity.ok(response);
     }
-    private Itinerary callGeminiService(Trip trip) {
-        ItineraryRequest itineraryRequest = new ItineraryRequest(
-            trip.getDestination(),
-            1, // Default people
-            calculateDays(trip.getStartDate(), trip.getEndDate()),
-            trip.getStartDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getEndDate().format(DateTimeFormatter.ISO_LOCAL_DATE),
-            trip.getBudget(),
-            "general" // Default interest
-        );
-
-        ResponseEntity<?> response = geminiController.generateItinerary(itineraryRequest);
+    
+    public Destination callGeminiService(String destination) {
+        ResponseEntity<?> response = geminiController.generateSpotsAndHotels(destination);
         if (response.getStatusCode() != HttpStatus.OK) {
-            throw new RuntimeException("Failed to generate itinerary from Gemini: " + response.getBody());
+            throw new RuntimeException("Failed to fetch spots/hotels from Gemini: " + response.getBody());
         }
 
         String jsonResponse = (String) response.getBody();
         try {
-            // Clean the response to remove markdown backticks
             String cleanedJson = cleanJsonResponse(jsonResponse);
-
-            // Extract and save spots into MongoDB
-            saveSpotsToMongo(cleanedJson, trip.getDestination());
-
-            // Convert entire JSON to Itinerary object
-            return objectMapper.readValue(cleanedJson, Itinerary.class);
+            return saveDataToMongo(cleanedJson, destination);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Gemini response: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to parse and save Gemini response: " + e.getMessage(), e);
         }
     }
-    private void saveSpotsToMongo(String cleanedJson, String destinationName) {
+    private String cleanJsonResponse(String response) {
+        return response
+            .replaceAll("```json\\s*", "")
+            .replaceAll("```\\s*", "")
+            .trim();
+    }
+    private Destination saveDataToMongo(String cleanedJson, String destinationName) {
         try {
             JsonNode rootNode = objectMapper.readTree(cleanedJson);
-            JsonNode spotsNode = rootNode.get("spots");
 
+            List<Destination.Spot> spots = new ArrayList<>();
+            JsonNode spotsNode = rootNode.get("spots");
             if (spotsNode != null && spotsNode.isArray()) {
-                List<Destination.Spot> spots = new ArrayList<>();
                 for (JsonNode spotNode : spotsNode) {
                     Destination.Spot spot = objectMapper.treeToValue(spotNode, Destination.Spot.class);
                     spots.add(spot);
                 }
-
-                Destination destination = new Destination();
-                destination.setDestination(destinationName);
-                destination.setSpots(spots);
-                destinationRepository.save(destination);
             }
+
+            List<Destination.Hotel> hotels = new ArrayList<>();
+            JsonNode hotelsNode = rootNode.get("hotels");
+            if (hotelsNode != null && hotelsNode.isArray()) {
+                for (JsonNode hotelNode : hotelsNode) {
+                    Destination.Hotel hotel = objectMapper.treeToValue(hotelNode, Destination.Hotel.class);
+                    hotels.add(hotel);
+                }
+            }
+
+            Destination destination = new Destination();
+            destination.setDestination(destinationName);
+            destination.setSpots(spots);
+            destination.setHotels(hotels);
+            return destinationRepository.save(destination);
         } catch (Exception e) {
-            System.err.println("Failed to extract/save spots: " + e.getMessage());
-            // Don't stop the main flow even if spot saving fails
+            System.err.println("Failed to extract/save spots and hotels: " + e.getMessage());
+            return null;
         }
     }
 
- private String cleanJsonResponse(String response) {
-        // Remove markdown code blocks and extra whitespace
-        return response
-            .replaceAll("```json\\s*", "") // Remove ```json and any following whitespace
-            .replaceAll("```\\s*", "")     // Remove closing ```
-            .trim();                       // Remove leading/trailing whitespace
-    }
-    private int calculateDays(LocalDate startDate, LocalDate endDate) {
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
-    }
-
-    private Itinerary parsePythonResponse(String jsonResponse, String destination) throws Exception {
-        // Parse JSON response from Flask
-        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
-
-        // Check if there’s an error or no similar activities
-        if (responseMap.containsKey("error")) {
-            throw new RuntimeException("Python microservice error: " + responseMap.get("error"));
-        }
-
-        if (responseMap.containsKey("message") && responseMap.get("similar_activities") == null) {
-            // No matching activities found; return empty itinerary
-            Itinerary itinerary = new Itinerary();
-            itinerary.setActivities(List.of());
-            return itinerary;
-        }
-        List<Map<String, Object>> similarActivities = (List<Map<String, Object>>) responseMap.get("similar_activities");
-        List<Activity> activities = similarActivities.stream()
-            .map(activityMap -> {
-                Map<String, Object> activityDetails = (Map<String, Object>) activityMap.get("activity");
-                Activity activity = new Activity();
-                activity.setDay((Integer) activityDetails.get("day"));
-                activity.setDate(LocalDate.parse((String) activityDetails.get("date")));
-                activity.setName((String) activityDetails.get("name"));
-                activity.setLocation((String) activityDetails.get("location"));
-                 activity.setTimeSlot((String) activityDetails.get("timeSlot")); // Assuming Activity uses timeSlot
-                activity.setEstimatedCost(((Number) activityDetails.get("estimatedCost")).doubleValue());
-                return activity;
-            })
-            .toList();
-        Itinerary itinerary = new Itinerary();
-        itinerary.setActivities(activities);
-        return itinerary;
-    }
     private Itinerary callPythonMicroservice(Trip trip) {
         String flaskUrl = "http://localhost:5000/generate_itinerary";
 
@@ -383,22 +336,37 @@ public class TripController {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        ObjectNode json = objectMapper.createObjectNode();
+        ObjectNode root = objectMapper.createObjectNode();       // Root JSON
+        ObjectNode tripNode = objectMapper.createObjectNode();   // Nested "trip" object
 
-        json.put("destination", trip.getDestination());
-        json.put("budget", trip.getBudget());
+        // Populate trip fields
+        tripNode.put("title", trip.getTitle());
+        tripNode.put("destination", trip.getDestination());
+        tripNode.put("startDate", trip.getStartDate().toString());
+        tripNode.put("endDate", trip.getEndDate().toString());
+        tripNode.put("budget", String.valueOf(trip.getBudget()));
+        tripNode.put("people", String.valueOf(trip.getPeople()));  // <-- Use direct people count
 
-        int peopleCount = (trip.getCollaborators() != null ? trip.getCollaborators().size() : 0) + 1;
-        json.put("people", peopleCount);
-        json.put("startDate", trip.getStartDate().toString());
-        json.put("endDate", trip.getEndDate().toString());
-
-        if (trip.getPreferences() != null && !trip.getPreferences().isEmpty()) {
+        // Handle preferences
+        if (trip.getPreferences() != null) {
             ArrayNode preferencesArray = objectMapper.valueToTree(trip.getPreferences());
-            json.set("preferences", preferencesArray);
+            tripNode.set("preferences", preferencesArray);
+        } else {
+            tripNode.set("preferences", objectMapper.createArrayNode());
         }
 
-        HttpEntity<String> entity = new HttpEntity<>(json.toString(), headers);
+        // Handle collaborators
+        if (trip.getCollaborators() != null) {
+            ArrayNode collaboratorsArray = objectMapper.valueToTree(trip.getCollaborators());
+            tripNode.set("collaborators", collaboratorsArray);
+        } else {
+            tripNode.set("collaborators", objectMapper.createArrayNode());
+        }
+
+        // Add "trip" object to the root
+        root.set("trip", tripNode);
+
+        HttpEntity<String> entity = new HttpEntity<>(root.toString(), headers);
 
         try {
             ResponseEntity<Itinerary> response = restTemplate.exchange(
@@ -407,9 +375,7 @@ public class TripController {
                 entity,
                 Itinerary.class
             );
-
             return response.getBody();
-
         } catch (Exception e) {
             throw new RuntimeException("Error calling Python microservice: " + e.getMessage(), e);
         }
