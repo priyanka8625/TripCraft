@@ -229,15 +229,15 @@ function Feed() {
                     alt={selectedPost.userId || 'User'}
                     className="w-8 h-8 rounded-full"
                   />
-                  <span className="text-gray-900 font-semibold">{selectedPost.userId || 'Unknown'}</span>
+                  <span className="text-gray-900 font-semibold">{selectedPost.name || 'Unknown'}</span>
                 </div>
                 <div className="p-4 border-b border-gray-200">
                   <p className="text-gray-900 text-lg">{selectedPost.caption || 'No caption'}</p>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ maxHeight: 'calc(80vh - 180px)' }}>
                   {(selectedPost.comments || []).map(comment => (
-                    <div key={comment.id} className="text-gray-900">
-                      <span className="font-bold">{comment.userId}</span>: {comment.comment}
+                    <div key={comment.userId} className="text-gray-900">
+                      <span className="font-bold">{comment.name}</span>: {comment.comment}
                     </div>
                   ))}
                 </div>
