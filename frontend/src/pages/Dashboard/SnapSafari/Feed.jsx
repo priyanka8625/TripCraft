@@ -229,7 +229,7 @@ function Feed() {
                     alt={selectedPost.userId || 'User'}
                     className="w-8 h-8 rounded-full"
                   />
-                  <span className="text-gray-900 font-semibold">{selectedPost.userId || 'Unknown'}</span>
+                  <span className="text-gray-900 font-semibold">{selectedPost.name || 'Unknown'}</span>
                 </div>
                 <div className="p-4 border-b border-gray-200">
                   <p className="text-gray-900 text-lg">{selectedPost.caption || 'No caption'}</p>
