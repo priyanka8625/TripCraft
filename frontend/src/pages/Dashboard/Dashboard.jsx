@@ -31,7 +31,7 @@ function Dashboard() {
           name: userData?.name || 'Unknown User',
           // name: 'Priyanka',
           role: 'Traveler',
-          avatar: './img/profile_pic.jpg' // Fallback avatar
+          avatar: '/img/profile_pic.jpg' // Fallback avatar
         });
         
         // Fetch activities (posts)

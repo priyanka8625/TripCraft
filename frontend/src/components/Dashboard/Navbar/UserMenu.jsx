@@ -20,7 +20,7 @@ const UserMenu = ({ user = {} }) => {
       </button>
       <div className="flex items-center space-x-2 cursor-pointer">
         <img
-          src={user?.avatar || './img/profile_pic'}
+          src='/img/profile_pic.jpg'
           alt={user?.name || 'User'}
           className="h-10 w-10 rounded-lg "
         />

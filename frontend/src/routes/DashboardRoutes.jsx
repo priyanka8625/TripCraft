@@ -10,6 +10,7 @@ import GenItineraryJSX from '../GenItineraryJSX/PlanFromScratch';
 import Trips from '../pages/Dashboard/Trips';
 import SnapSafariRoutes from './SnapSafariRoutes';
 import PlanFromScratch from '../GenItineraryJSX/PlanFromScratch';
+import Chatbot from '../pages/Dashboard/Chatbot';
 function DashboardRoutes() {
   return (
     <Routes>
@@ -23,7 +24,7 @@ function DashboardRoutes() {
         <Route path="plan/manual/generate" element={<PlanFromScratch />} />
 {/*         <Route path='ai-assistant' element={<AIChatBot />} /> */}
         <Route path='snap-safari/*' element={<SnapSafariRoutes/>} />
-        {/* <Route path='snap-safari/profile' element={<Profile />} /> */}
+        <Route path='ai-assistant' element={<Chatbot />} />
         
       </Route>
     </Routes>
