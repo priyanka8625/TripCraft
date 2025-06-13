@@ -17,5 +17,6 @@ public interface TripRepository extends MongoRepository<Trip, String>{
     Trip save(Trip trip);
     @Query("{ $or: [ { 'userId': ?0 }, { 'collaborators.userId': ?0 } ] }")
     List<Trip> findTripsSharedWithUser(String email);
+    List<Trip> findByCollaboratorsEmail(String email);
 
 }

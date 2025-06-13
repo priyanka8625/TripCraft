@@ -8,7 +8,16 @@ public class Collaborator {
     public String getUserId() {
         return userId;
     }
-    public void setUserId(String userId) {
+    public Collaborator() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public Collaborator( String email) {
+		super();
+	
+		this.email = email;
+	}
+	public void setUserId(String userId) {
         this.userId = userId;
     }
     public String getEmail() {

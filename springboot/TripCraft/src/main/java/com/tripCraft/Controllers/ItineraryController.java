@@ -37,7 +37,7 @@ public class ItineraryController {
 
     // ✅ 3. Get Itinerary by Trip ID
     @GetMapping("/trip/{tripId}")
-    public ResponseEntity<List<Itinerary>> getItineraryByTripId(@PathVariable String tripId) {
+    public ResponseEntity<Itinerary> getItineraryByTripId(@PathVariable String tripId) {
         return ResponseEntity.ok(itineraryRepository.findByTripId(tripId));
     }
 

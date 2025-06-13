@@ -2,6 +2,7 @@ package com.tripCraft.Services;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,8 +18,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.tripCraft.model.Collaborator;
 import com.tripCraft.model.LoginRequest;
+import com.tripCraft.model.Trip;
 import com.tripCraft.model.User;
+import com.tripCraft.repository.TripRepository;
 import com.tripCraft.repository.UserRepo;
 
 @Service
@@ -32,7 +36,9 @@ public class UserService {
 
     @Autowired
     private UserRepo repo;
-
+    
+    @Autowired
+    private TripRepository tripRepository;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
@@ -51,56 +57,73 @@ public class UserService {
             .ok("{\"message\": \"User registered successfully\"}");
 }
 
+    public ResponseEntity<Map<String, String>> verify(LoginRequest user) {
+        try {
+            Authentication authentication = authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
 
+            if (authentication.isAuthenticated()) {
+                // Generate the JWT token
+                String token = jwtService.generateToken(user.getEmail());
 
+                // Create secure cookie
+                ResponseCookie cookie = ResponseCookie.from("jwt", token)
+                        .httpOnly(true)
+                        .secure(false) // Set to true in production with HTTPS
+                        .path("/")
+                        .maxAge(Duration.ofDays(7))
+                        .sameSite("Strict")
+                        .build();
 
-public ResponseEntity<Map<String, String>> verify(LoginRequest user) {
-    try {
-        Authentication authentication = authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
+                // 🔍 Fetch user by email
+                Optional<User> optionalUser = repo.findByEmail(user.getEmail());
+                if (optionalUser.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                            .body(Map.of("message", "User not found"));
+                }
 
-        if (authentication.isAuthenticated()) {
-            // Generate the JWT token
-            String token = jwtService.generateToken(user.getEmail());
+                User loggedInUser = optionalUser.get();
+                String name = loggedInUser.getName();
 
-            // Create secure cookie
-            ResponseCookie cookie = ResponseCookie.from("jwt", token)
-                    .httpOnly(true)
-                    .secure(false) // remove this in localhost if not using https
-                    .path("/")
-                    .maxAge(Duration.ofDays(7))
-                    .sameSite("Strict")
-                    .build();
+                // 🔁 Check if this user is a collaborator on any trip
+                List<Trip> trips = tripRepository.findByCollaboratorsEmail(user.getEmail());
 
-            // 🔍 Fetch user's name
-            Optional<User> optionalUser = repo.findByEmail(user.getEmail());
-            String name = optionalUser.map(User::getName).orElse("User");
+                for (Trip trip : trips) {
+                    boolean updated = false;
 
-            // ✅ JSON response with name
-            Map<String, String> responseBody = new HashMap<>();
-            responseBody.put("message", "Login successful");
-            responseBody.put("name", name);
+                    for (Collaborator collaborator : trip.getCollaborators()) {
+                        if (collaborator.getEmail().equalsIgnoreCase(user.getEmail())
+                                && (collaborator.getUserId() == null || collaborator.getUserId().isEmpty())) {
+                            collaborator.setUserId(loggedInUser.getId());
+                            updated = true;
+                        }
+                    }
 
-            System.out.println("token: " + token);
+                    if (updated) {
+                        tripRepository.save(trip); // Save only if updates were made
+                    }
+                }
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(responseBody);
-        } else {
-            Map<String, String> responseBody = new HashMap<>();
-            responseBody.put("message", "Authentication failed");
+                // ✅ JSON response with name
+                Map<String, String> responseBody = new HashMap<>();
+                responseBody.put("message", "Login successful");
+                responseBody.put("name", name);
 
-            System.out.println("error: auth failed");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseBody);
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                        .body(responseBody);
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Authentication failed"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                            "message", "Internal server error: " + e.getMessage(),
+                            "status", "error"
+                    ));
         }
-    } catch (Exception e) {
-        Map<String, String> responseBody = new HashMap<>();
-        responseBody.put("message", "Internal server error: " + e.getMessage());
-        responseBody.put("status", "error");
-
-        System.out.println("error: " + e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseBody);
     }
-}
+
 
 }

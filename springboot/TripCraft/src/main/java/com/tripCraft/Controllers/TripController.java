@@ -247,7 +247,22 @@ public class TripController {
 
         if (trip.getCollaborators() == null) {
             trip.setCollaborators(new ArrayList<>());
+        } else {
+            for (Collaborator collaborator : trip.getCollaborators()) {
+            	
+            	Optional<User> userCollab = userRepository.findByEmail(collaborator.getEmail());
+            	userCollab.ifPresent(value -> collaborator.setUserId(value.getId()));
+
+                String subject = "New Trip Added!";
+                String body = "Hi there!\r\n"
+                        + "You've been added as a collaborator to an exciting new trip planned on TripCraft. "
+                        + "The trip is headed to " + trip.getDestination() + " from " + trip.getStartDate() + " to " + trip.getEndDate() + ". "
+                        + "As a "  + ", you'll be able to view and contribute to the trip details. "
+                        + "Log in to your TripCraft account to explore the plan and join the adventure!\r\n";
+                emailSenderService.sendEmail(collaborator.getEmail(), subject, body);
+            }
         }
+
         // Step 3: Check if destination exists in the database
         boolean destinationExists = destinationRepository.existsByDestination(trip.getDestination());
 
