@@ -6,10 +6,24 @@ import RestaurantCard from '../../../components/Dashboard/PlanItinerary/Restaura
 import HotelCard from '../../../components/Dashboard/PlanItinerary/HotelCard.jsx';
 import MapComponent from '../../../components/Dashboard/PlanItinerary/MapComponent.jsx';
 import LoadingScreen from '../../../components/Dashboard/PlanItinerary/LoadingScreen.jsx';
+import { getItineraryWithTripId } from '../../../services/tripService.js'; // Adjust the path to your service file
 
-// Hardcoded itinerary data (replace with backend fetch)
-const itineraryData = {
-  itinerary: [
+export default function DisplayItinerary() {
+  const [activeDay, setActiveDay] = useState(0);
+  const [expandedSections, setExpandedSections] = useState({
+    activities: true,
+    restaurants: false,
+    hotels: false,
+  });
+  const [tripDays, setTripDays] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { tripId } = location.state || {};
+  const [focusedLocation, setFocusedLocation] = useState(null);
+  const itineraryData = {
+    itinerary: [
     {
       day: 1,
       date: "2025-04-25",
@@ -58,30 +72,27 @@ const itineraryData = {
         { name: "Shangri-La Eros, New Delhi", location: "Connaught Place", pricePerNight: 16000, rating: 4.5, latitude: 28.628, longitude: 77.22 }
       ]
     }
+    // Add more days as needed
   ]
 };
 
-export default function DisplayItinerary() {
-  const [activeDay, setActiveDay] = useState(0);
-  const [expandedSections, setExpandedSections] = useState({
-    activities: true,
-    restaurants: false,
-    hotels: false,
-  });
-  const [tripDays, setTripDays] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { tripId } = location.state || {};
-  const [focusedLocation, setFocusedLocation] = useState(null);
 
   useEffect(() => {
     const fetchItinerary = async () => {
+      if (!tripId) {
+        setError('No trip ID provided');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
-        const data = itineraryData.itinerary;
-        setTripDays(data);
+        const data = await getItineraryWithTripId(tripId);
+        // Assuming the response is an array of itinerary days (matching your backend response structure)
+        setTripDays(data.itinerary || []);
+        //if data is of the older format
+        if(!data.activities)
+          setTripDays(itineraryData.itinerary);//set demo data
       } catch (err) {
         setError(err.message || 'Error fetching itinerary');
       } finally {
@@ -101,7 +112,7 @@ export default function DisplayItinerary() {
 
   const handleEditItinerary = () => {
     const formattedActivities = tripDays.flatMap((day, index) =>
-      day.activities.map(activity => ({
+      day.activities.map((activity) => ({
         id: `${activity.name}-${index}`,
         name: activity.name,
         category: activity.category || 'unknown',
@@ -131,7 +142,7 @@ export default function DisplayItinerary() {
   // Filter out Travel activities and add type to locations
   const mappedLocations = [
     ...currentActivities
-      .filter(activity => activity.category !== 'Travel')
+      .filter((activity) => activity.category !== 'Travel')
       .map((activity) => ({
         name: activity.name,
         coordinates: [activity.latitude, activity.longitude],
@@ -222,18 +233,34 @@ export default function DisplayItinerary() {
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                     </div>
                     <span className="font-semibold text-lg">Activities</span>
                   </div>
-                  <div className={`transform transition-transform duration-300 ${expandedSections.activities ? 'rotate-180' : ''}`}>
+                  <div
+                    className={`transform transition-transform duration-300 ${
+                      expandedSections.activities ? 'rotate-180' : ''
+                    }`}
+                  >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                 </button>
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${expandedSections.activities ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div
+                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                    expandedSections.activities ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
                   <div className="relative pl-12 mt-6 mb-16">
                     <div className="absolute left-[12px] top-0 w-[3px] bg-gradient-to-b from-emerald-400 to-emerald-600 h-full rounded-full shadow-sm"></div>
                     <div className="space-y-6">
@@ -248,7 +275,10 @@ export default function DisplayItinerary() {
                           ) : (
                             <ActivityCard
                               event={event}
-                              index={currentActivities.filter((e, i) => e.category !== 'Travel' && i <= index).length - 1}
+                              index={
+                                currentActivities.filter((e, i) => e.category !== 'Travel' && i <= index)
+                                  .length - 1
+                              }
                               isLast={index === currentActivities.length - 1}
                               isFirst={index === 0}
                               onClick={() => setFocusedLocation([event.latitude, event.longitude])}
@@ -275,13 +305,25 @@ export default function DisplayItinerary() {
                     </div>
                     <span className="font-semibold text-lg">Restaurants</span>
                   </div>
-                  <div className={`transform transition-transform duration-300 ${expandedSections.restaurants ? 'rotate-180' : ''}`}>
+                  <div
+                    className={`transform transition-transform duration-300 ${
+                      expandedSections.restaurants ? 'rotate-180' : ''
+                    }`}
+                  >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                 </button>
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${expandedSections.restaurants ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div
+                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                    expandedSections.restaurants ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
                   <div className="mt-6 mb-8 space-y-4">
                     {currentLunch.map((lunch, index) => (
                       <RestaurantCard
@@ -308,13 +350,25 @@ export default function DisplayItinerary() {
                     </div>
                     <span className="font-semibold text-lg">Hotels</span>
                   </div>
-                  <div className={`transform transition-transform duration-300 ${expandedSections.hotels ? 'rotate-180' : ''}`}>
+                  <div
+                    className={`transform transition-transform duration-300 ${
+                      expandedSections.hotels ? 'rotate-180' : ''
+                    }`}
+                  >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   </div>
                 </button>
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${expandedSections.hotels ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div
+                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                    expandedSections.hotels ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
                   <div className="mt-6 mb-8 space-y-4">
                     {currentStay.map((stay, index) => (
                       <HotelCard
@@ -330,7 +384,10 @@ export default function DisplayItinerary() {
 
             {/* Map */}
             <div className="lg:w-1/4 w-full">
-              <div className="backdrop-blur-lg bg-white/30 border border-white/20 rounded-2xl shadow-2xl p-6" style={{ height: '600px' }}>
+              <div
+                className="backdrop-blur-lg bg-white/30 border border-white/20 rounded-2xl shadow-2xl p-6"
+                style={{ height: '600px' }}
+              >
                 <div className="h-full rounded-xl overflow-hidden border-2 border-emerald-200/50 shadow-inner">
                   <MapComponent locations={mappedLocations} focusedLocation={focusedLocation} />
                 </div>
