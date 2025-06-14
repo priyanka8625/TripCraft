@@ -171,15 +171,38 @@ public class TripController {
         Optional<Destination> destinationOpt = destinationRepository.findByDestinationIgnoreCase(trip.getDestination());
 
         List<Destination.Spot> spots = new ArrayList<>();
+        Destination.Hotel lunch = null;
+        Destination.Hotel stay = null;
+
         if (destinationOpt.isPresent()) {
-            spots = destinationOpt.get().getSpots(); // Get all spots from the destination
+            Destination destination = destinationOpt.get();
+            
+            // ✅ Spots
+            if (destination.getSpots() != null) {
+                spots = destination.getSpots();
+            }
+
+            // ✅ Hotels (extract Lunch and Stay)
+            if (destination.getHotels() != null) {
+                for (Destination.Hotel hotel : destination.getHotels()) {
+                    if ("Lunch".equalsIgnoreCase(hotel.getStayType()) && lunch == null) {
+                        lunch = hotel;
+                    } else if ("Stay".equalsIgnoreCase(hotel.getStayType()) && stay == null) {
+                        stay = hotel;
+                    }
+                }
+            }
         }
+
 
         // ✅ Build the response
         Map<String, Object> response = new HashMap<>();
         response.put("tripId", savedTrip.getId());
-        response.put("spots", spots);  // Directly include the full list with all attributes
+        response.put("spots", spots);  // List<Spot>
+        response.put("lunch", lunch);  // Single Hotel with stayType="Lunch"
+        response.put("stay", stay);    // Single Hotel with stayType="Stay"
 
+       
         return ResponseEntity.ok(response);
     }
   
