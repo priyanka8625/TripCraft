@@ -171,8 +171,9 @@ public class TripController {
         Optional<Destination> destinationOpt = destinationRepository.findByDestinationIgnoreCase(trip.getDestination());
 
         List<Destination.Spot> spots = new ArrayList<>();
-        Destination.Hotel lunch = null;
-        Destination.Hotel stay = null;
+        List<Destination.Hotel> lunch = new ArrayList<>();
+        List<Destination.Hotel> stay = new ArrayList<>();
+
 
         if (destinationOpt.isPresent()) {
             Destination destination = destinationOpt.get();
@@ -185,25 +186,25 @@ public class TripController {
             // ✅ Hotels (extract Lunch and Stay)
             if (destination.getHotels() != null) {
                 for (Destination.Hotel hotel : destination.getHotels()) {
-                    if ("Lunch".equalsIgnoreCase(hotel.getStayType()) && lunch == null) {
-                        lunch = hotel;
-                    } else if ("Stay".equalsIgnoreCase(hotel.getStayType()) && stay == null) {
-                        stay = hotel;
+                    if ("Lunch".equalsIgnoreCase(hotel.getStayType())) {
+                        lunch.add(hotel);
+                    } else if ("Stay".equalsIgnoreCase(hotel.getStayType())) {
+                        stay.add(hotel);
                     }
                 }
             }
+
         }
 
 
-        // ✅ Build the response
         Map<String, Object> response = new HashMap<>();
         response.put("tripId", savedTrip.getId());
-        response.put("spots", spots);  // List<Spot>
-        response.put("lunch", lunch);  // Single Hotel with stayType="Lunch"
-        response.put("stay", stay);    // Single Hotel with stayType="Stay"
+        response.put("spots", spots);         // List<Spot>
+        response.put("lunch", lunch);   // List<Hotel> with stayType="Lunch"
+        response.put("stay", stay);     // List<Hotel> with stayType="Stay"
 
-       
         return ResponseEntity.ok(response);
+
     }
   
    // ✅ Update an existing trip
