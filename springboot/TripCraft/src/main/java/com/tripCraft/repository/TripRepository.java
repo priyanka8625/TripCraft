@@ -2,6 +2,7 @@ package com.tripCraft.repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
@@ -18,5 +19,5 @@ public interface TripRepository extends MongoRepository<Trip, String>{
     @Query("{ $or: [ { 'userId': ?0 }, { 'collaborators.userId': ?0 } ] }")
     List<Trip> findTripsSharedWithUser(String email);
     List<Trip> findByCollaboratorsEmail(String email);
-
+    Optional<Trip> findById(String id); 
 }
