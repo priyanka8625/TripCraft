@@ -6,26 +6,31 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { Sidebar } from './planFromScratch/Sidebar';
-import { ItineraryDay } from './planFromScratch/ItineraryDay';
+import { useLocation, useParams } from 'react-router-dom';
+import { Sidebar } from './components/Sidebar';
+import { ItineraryDay } from './components/ItineraryDay';
 import { useItineraryStore } from './store/itineraryStore';
-import { Calendar, Plus, Users, Save } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Calendar, Plus, Save, MapPin, Users, X } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import { createItinerary } from '../services/itineraryService';
-import toast from 'react-hot-toast';
+import { addCollaborator } from '../services/collaboratorService';
+import useWebSocket from '../hooks/useWebSocket';
 
 function PlanFromScratch() {
-  const [showCollaboratorModal, setShowCollaboratorModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [collaboratorEmail, setCollaboratorEmail] = useState('');
+  const [collaborators, setCollaborators] = useState([]);
+  const location = useLocation();
+  const { mode } = useParams();
+  const isEditMode = mode === 'edit';
 
   const {
     days,
     addDay,
     addItem,
-    addCollaborator,
-    collaborators,
     title,
     destination,
     setDestination,
@@ -37,158 +42,163 @@ function PlanFromScratch() {
     setDates,
     setBudget,
     setSuggestedPeople,
-    setCollaborators,
-    setDays, // Add setDays to update days state
-    getState,
+    setDays,
+    tripId,
+    setTripId, // Added to destructure the setter
   } = useItineraryStore();
 
-  const location = useLocation();
-  const [recommendations, setRecommendations] = useState([]);
-  const [tripId, setTripId] = useState(null);
+  const [recommendations, setRecommendations] = useState({});
 
-  // Initialize days with activities from location.state.spots
   useEffect(() => {
-    console.log('[PlanFromScratch] location.state:', location.state);
-    const tripData = location.state?.tripData;
-    const spots = location.state?.spots;
-    setTripId(location.state?.tripId);
-    console.log('[PlanFromScratch] tripData:', tripData);
-    console.log('[PlanFromScratch] spots:', spots);
-    console.log('[PlanFromScratch] Setting tripId:', tripId);
+    if (location.state) {
+      const { tripId, tripData, lunch, stay, spots, itinerary } = location.state;
+      setTitle(tripData.title);
+      setDestination(tripData.destination);
+      setDates(tripData.startDate, tripData.endDate);
+      setBudget(tripData.budget);
+      setSuggestedPeople(tripData.people);
+      setTripId(tripId); // Added to set tripId in the store
 
-    if (tripData) {
-      setTitle(tripData.title || '');
-      setDestination(tripData.destination || '');
-      setDates(tripData.startDate || '', tripData.endDate || '');
-      setBudget(tripData.budget || 20000);
-      setSuggestedPeople(tripData.people || 2);
-      setCollaborators(tripData.collaborators || []);
-    }
-
-    // Initialize recommendations and days with spots
-    if (Array.isArray(spots) && spots.length > 0) {
-      const mappedSpots = spots.map((spot) => ({
-        id: spot.id || crypto.randomUUID(),
-        category: spot.category || 'unknown',
-        estimatedCost: spot.estimatedCost || 0,
-        latitude: spot.latitude || 0,
-        location: spot.location || 'Unknown',
-        longitude: spot.longitude || 0,
-        name: spot.name || 'Unnamed Spot',
-        rating: spot.rating || 0,
-        timeSlot: spot.timeSlot || 'Any',
-      }));
-      console.log('[PlanFromScratch] mappedSpots:', mappedSpots);
-      setRecommendations(mappedSpots);
-
-      // Group spots by day for days state
-      const groupedByDay = spots.reduce((acc, spot, index) => {
-        const dayIndex = Math.floor(index / 3); // Example: 3 activities per day
-        const date = tripData?.startDate
-          ? new Date(new Date(tripData.startDate).setDate(new Date(tripData.startDate).getDate() + dayIndex)).toLocaleDateString()
-          : `Day ${dayIndex + 1}`;
-        if (!acc[dayIndex]) {
-          acc[dayIndex] = {
+      if (isEditMode && itinerary) {
+        setDays(itinerary.map(day => ({
+          id: day.id || crypto.randomUUID(),
+          date: day.date,
+          items: day.items.map(item => ({
+            ...item,
+            id: item.id || crypto.randomUUID(),
+          })),
+        })));
+        setRecommendations({});
+      } else {
+        setRecommendations({
+          lunch: lunch || [],
+          stay: stay || [],
+          spots: spots || [],
+        });
+        const start = new Date(tripData.startDate);
+        const end = new Date(tripData.endDate);
+        const dayCount = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        const newDays = Array.from({ length: dayCount }, (_, i) => {
+          const date = new Date(start);
+          date.setDate(start.getDate() + i);
+          return {
             id: crypto.randomUUID(),
-            date,
+            date: date.toISOString().split('T')[0],
             items: [],
           };
-        }
-        acc[dayIndex].items.push({
-          id: spot.id || crypto.randomUUID(),
-          name: spot.name || 'Unnamed Spot',
-          category: spot.category || 'unknown',
-          location: spot.location || 'N/A',
-          estimatedCost: spot.estimatedCost || 0,
-          timeSlot: spot.timeSlot || 'Any',
-          rating: spot.rating || 0,
-          latitude: spot.latitude || 0,
-          longitude: spot.longitude || 0,
         });
-        return acc;
-      }, []);
-
-      const newDays = Object.values(groupedByDay);
-      console.log('[PlanFromScratch] Initializing days with spots:', newDays);
-      setDays(newDays); // Set days state with grouped activities
+        setDays(newDays);
+      }
     } else {
-      console.log('[PlanFromScratch] No valid spots found, setting recommendations to []');
-      setRecommendations([]);
+      toast.error('No trip data found. Please create a trip first.');
+      setTitle('');
+      setDestination('');
+      setDates('', '');
+      setBudget(0);
+      setSuggestedPeople(0);
+      setRecommendations({ lunch: [], stay: [], spots: [] });
+      setDays([]);
     }
   }, [
     location.state,
+    isEditMode,
     setTitle,
     setDestination,
     setDates,
     setBudget,
     setSuggestedPeople,
-    setCollaborators,
     setDays,
-    location.state.tripData?.startDate,
+    setTripId, // Added to dependencies
   ]);
 
+   const { sendUpdate } = useWebSocket(tripId, (incomingEdit) => {
+    // Update your itinerary state here based on incomingEdit
+    console.log("Real-time edit: ", incomingEdit);
+  }); 
+
+
   const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 10,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 250,
-        tolerance: 5,
-      },
-    })
+    useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
   );
 
   const handleDragEnd = (event) => {
-    console.log('[PlanFromScratch] DndContext onDragEnd:', event);
     const { active, over } = event;
     if (over && active.data.current) {
       const droppedItem = active.data.current;
       const dayId = over.data.current?.dayId;
       if (dayId) {
-        console.log('[PlanFromScratch] DndContext - Dropped item:', droppedItem);
         const newItem = {
           id: `${droppedItem.id || 'unknown'}-${Date.now()}`,
-          name: droppedItem.name || droppedItem.title || 'Untitled',
-          category: droppedItem.category || droppedItem.type || 'unknown',
+          name: droppedItem.name || 'Untitled',
+          category: droppedItem.category || 'Popular',
           location: droppedItem.location || 'N/A',
-          estimatedCost: droppedItem.estimatedCost || droppedItem.cost || 0,
-          timeSlot: droppedItem.timeSlot || droppedItem.time || 'N/A',
+          estimatedCost: droppedItem.estimatedCost || droppedItem.price || droppedItem.pricePerNight || 0,
+          timeSlot: droppedItem.timeSlot || 'N/A',
           rating: droppedItem.rating || 0,
           latitude: droppedItem.latitude || null,
           longitude: droppedItem.longitude || null,
+          duration: droppedItem.duration || 2,
+          durationUnit: droppedItem.durationUnit || 'hours',
+          type: droppedItem.type || 'spot',
+          ...(droppedItem.type === 'lunch' && { price: droppedItem.price || droppedItem.estimatedCost || 0 }),
+          ...(droppedItem.type === 'stay' && { pricePerNight: droppedItem.pricePerNight || droppedItem.estimatedCost || 0 }),
         };
-        console.log('[PlanFromScratch] DndContext - Normalized newItem:', newItem);
         addItem(dayId, newItem);
-      } else {
-        console.warn('[PlanFromScratch] No dayId found in over.data.current:', over);
+        toast.success(`Added ${newItem.name} to your itinerary!`);
       }
-    } else {
-      console.warn('[PlanFromScratch] Invalid drag end:', { active, over });
     }
   };
 
   const handleAddDay = () => {
     const currentLastDay = days[days.length - 1];
     let newDate;
-
     if (currentLastDay) {
       const lastDate = new Date(currentLastDay.date);
       lastDate.setDate(lastDate.getDate() + 1);
-      newDate = lastDate.toLocaleDateString();
+      newDate = lastDate.toISOString().split('T')[0];
     } else {
-      newDate = new Date(startDate).toLocaleDateString();
+      newDate = new Date(startDate).toISOString().split('T')[0];
     }
-
     addDay(newDate);
+    toast.success('New day added to your itinerary!');
   };
 
-  const handleAddCollaborator = (email) => {
-    if (email) {
-      addCollaborator(email);
-      setShowCollaboratorModal(false);
+  const handleAddCollaborator = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCollaboratorEmail('');
+  };
+
+  const handleSubmitCollaborator = async (e) => {
+    e.preventDefault();
+    if (!collaboratorEmail) {
+      toast.error('Please enter an email address.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(collaboratorEmail)) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
+    if (collaborators.includes(collaboratorEmail)) {
+      toast.error('This email is already added as a collaborator.');
+      return;
+    }
+    if (!tripId) {
+      toast.error('No trip found. Please create a trip first.');
+      return;
+    }
+
+    try {
+      await addCollaborator(tripId, collaboratorEmail);
+      setCollaborators([...collaborators, collaboratorEmail]);
+      toast.success(`Added ${collaboratorEmail} as a collaborator!`);
+      setCollaboratorEmail('');
+    } catch (error) {
+      toast.error(error.message || 'Failed to add collaborator. Please try again.');
     }
   };
 
@@ -202,12 +212,8 @@ function PlanFromScratch() {
   };
 
   const handleSaveItinerary = async () => {
-    console.log('[PlanFromScratch] handleSaveItinerary called');
-    console.log('[PlanFromScratch] tripId:', tripId);
-
     if (!tripId) {
-      console.warn('[PlanFromScratch] No tripId found');
-      setSaveError('No trip ID found. Please create a trip first.');
+      toast.error('No trip ID found. Please create a trip first.');
       return;
     }
 
@@ -216,220 +222,217 @@ function PlanFromScratch() {
     setSaveSuccess(false);
 
     try {
-      const activities = days.flatMap((day, index) => {
-        const date = new Date(day.date);
-        if (isNaN(date.getTime())) {
-          console.warn(`[PlanFromScratch] Invalid date for day ${index + 1}:`, day.date);
-          return [];
-        }
-        const isoDate = date.toISOString();
+      const itineraryData = {
+        tripId,
+        itinerary: days.map((day, index) => {
+          const dayDate = new Date(day.date);
+          const formattedDate = dayDate.toISOString().split('T')[0];
 
-        return day.items.map((item) => ({
-          day: index + 1,
-          date: isoDate,
-          name: item.name || 'Untitled',
-          location: item.location || 'N/A',
-          time_slot: item.timeSlot || 'N/A',
-          estimated_cost: Number(item.estimatedCost) || 0,
-          rating: Number(item.rating) || 0,
-        }));
-      });
+          const activities = day.items
+            .filter(item => item.type === 'spot' || !item.type)
+            .map(item => ({
+              name: item.name || 'Untitled',
+              category: item.category || 'Popular',
+              location: item.location || 'N/A',
+              time_slot: item.timeSlot || 'N/A',
+              duration: Number(item.duration) || 2.0,
+              durationUnit: item.durationUnit || 'hours',
+              estimatedCost: Number(item.estimatedCost) || 0,
+              rating: Number(item.rating) || 0,
+              latitude: Number(item.latitude) || 0,
+              longitude: Number(item.longitude) || 0,
+            }));
 
-      const itinerary = {
-        tripId: tripId,
-        activities,
+          const lunch = day.items
+            .filter(item => item.type === 'lunch')
+            .map(item => ({
+              name: item.name || 'Untitled',
+              location: item.location || 'N/A',
+              price: Number(item.price || item.estimatedCost) || 0,
+              rating: Number(item.rating) || 0,
+              latitude: Number(item.latitude) || 0,
+              longitude: Number(item.longitude) || 0,
+            }));
+
+          const stay = day.items
+            .filter(item => item.type === 'stay')
+            .map(item => ({
+              name: item.name || 'Untitled',
+              location: item.location || 'N/A',
+              pricePerNight: Number(item.pricePerNight || item.estimatedCost) || 0,
+              rating: Number(item.rating) || 0,
+              latitude: Number(item.latitude) || 0,
+              longitude: Number(item.longitude) || 0,
+            }));
+
+          return { day: index + 1, date: formattedDate, activities, lunch, stay };
+        }),
       };
 
-      console.log('[PlanFromScratch] Sending itinerary to backend:', itinerary);
-
-      const savedItinerary = await createItinerary(itinerary);
-      console.log('[PlanFromScratch] Backend response:', savedItinerary);
+      console.log("Sending itinerary data:", itineraryData);
+      const response = await createItinerary(itineraryData);
+      console.log("Saved response:", response);
       
       setSaveSuccess(true);
       toast.success('Itinerary saved successfully!');
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
-      console.error('[PlanFromScratch] Error saving itinerary:', error);
+      console.error('Error saving itinerary:', error);
       setSaveError(error.message);
+      toast.error(error.message || 'Failed to save itinerary. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const remainingDays = calculateRemainingDays();
-  const tripDuration = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="flex h-screen bg-gray-100">
-        {/* Conditionally render Sidebar */}
-        {recommendations.length > 0 && (
-          <div className="w-72 bg-gray-50 flex flex-col">
-            <div className="p-3">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Recommended Activities
-              </h2>
-            </div>
-            <div className="flex-1 overflow-auto">
+    <>
+      <Toaster position="top-right" />
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <div className="flex h-screen bg-gray-50">
+          {!isEditMode && (
+            <div className="w-80 bg-white shadow-lg flex flex-col">
               <Sidebar recommendations={recommendations} />
             </div>
-          </div>
-        )}
-        <div className={`flex-1 flex flex-col ${recommendations.length === 0 ? 'w-full' : ''}`}>
-          <div className="w-full bg-white">
-            <div className="px-6 py-4">
-              <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold">Itinerary Planner</h1>
-                <div className="flex gap-2">
-                  {/* <button
-                    onClick={() => setShowCollaboratorModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  >
-                    <Users className="w-5 h-5" />
-                    <span>Add Collaborator</span>
-                  </button> */}
-                  <button
-                    onClick={() => {
-                      console.log('[PlanFromScratch] Save button clicked');
-                      handleSaveItinerary();
-                    }}
-                    disabled={isSaving}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed transition-colors`}
-                  >
-                    <Save className="w-5 h-5" />
-                    <span>{isSaving ? 'Saving...' : 'Save Itinerary'}</span>
-                  </button>
+          )}
+          <div className="flex-1 flex flex-col">
+            <div className="bg-white shadow-sm border-b">
+              <div className="px-8 py-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Itinerary Planner</h1>
+                    {destination && (
+                      <div className="flex items-center gap-2 mt-2 text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-lg">Planning your trip to {destination}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={handleAddCollaborator}
+                      disabled={isSaving || !tripId}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+                        isSaving || !tripId
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'
+                      }`}
+                    >
+                      <Users className="w-5 h-5" />
+                      <span>Add Collaborator</span>
+                    </button>
+                    <button
+                      onClick={handleSaveItinerary}
+                      disabled={isSaving || !tripId}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+                        isSaving || !tripId
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl'
+                      }`}
+                    >
+                      <Save className="w-5 h-5" />
+                      <span>{isSaving ? 'Saving...' : 'Save Itinerary'}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-2">
-                <h2 className="text-xl">
-                  Let's build an itinerary for {destination}
-                </h2>
               </div>
             </div>
-          </div>
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 p-8 overflow-auto">
-              <div className="h-45 bg-gray-50 w-full p-4">
-                <h1 className="text-4xl font-semibold mb-4 text-teal-900">
-                  {title}
-                </h1>
-                <div className="flex gap-4">
-                  <div className="flex-1 bg-white rounded-lg p-4 shadow-sm">
-                    <h4 className="text-sm font-medium text-gray-600">
-                      Suggested People
-                    </h4>
-                    <p className="mt-2 text-lg font-semibold">
-                      {suggestedPeople}
-                    </p>
-                  </div>
-                  <div className="flex-1 bg-white rounded-lg p-4 shadow-sm">
-                    <h4 className="text-sm font-medium text-gray-600">
-                      Overall Budget
-                    </h4>
-                    <p className="mt-2 text-lg font-semibold">
-                      {(budget * suggestedPeople).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <br />
-              <div className="mb-8 flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  {remainingDays > 0 && (
-                    <button
-                      onClick={handleAddDay}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-lg"
-                    >
-                      <Plus className="w-6 h-6" />
-                      <span>Add Next Day</span>
+            {isModalOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Add Collaborator</h2>
+                    <button onClick={handleCloseModal} className="text-gray-600 hover:text-gray-800">
+                      <X className="w-6 h-6" />
                     </button>
+                  </div>
+                  <div className="mb-6">
+                    <input
+                      type="email"
+                      value={collaboratorEmail}
+                      onChange={(e) => setCollaboratorEmail(e.target.value)}
+                      placeholder="Enter collaborator's email"
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                    <button
+                      onClick={handleSubmitCollaborator}
+                      className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Add Email
+                    </button>
+                  </div>
+                  {collaborators.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Collaborators</h3>
+                      <ul className="space-y-2">
+                        {collaborators.map((email, index) => (
+                          <li key={index} className="text-gray-700 bg-gray-100 p-2 rounded-lg">
+                            {email}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="space-y-8">
-                {days.map((day) => (
-                  <ItineraryDay key={day?.id} day={day} />
-                ))}
-                {days.length === 0 && (
-                  <div className="text-center py-16 bg-white rounded-lg">
-                    <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-500 text-lg">
-                      Click the + button to add your first day
+            )}
+            {title && startDate && endDate && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">{title}</h2>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Duration</h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
                     </p>
                   </div>
-                )}
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Travelers</h4>
+                    <p className="text-lg font-semibold text-gray-900">{suggestedPeople} people</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <h4 className="text-sm font-medium text-gray-600 mb-1">Budget</h4>
+                    <p className="text-lg font-semibold text-gray-900">
+                      ₹{(budget * suggestedPeople).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="w-72 bg-white">
-              <div className="h-[calc(100vh-96px)] w-full">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d83998.95410696238!2d2.276995235352685!3d48.85883773935407!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e66e1f06e2b70f%3A0x40b82c3688c9460!2sParis%2C%20France!5e0!3m2!1sen!2sus!4v1647280332529!5m2!1sen!2sus"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+            )}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto p-8">
+                <div className="mb-6 flex justify-between items-center">
+                  <h3 className="text-xl font-semibold text-gray-900">Your Itinerary</h3>
+                  {remainingDays > 0 && (
+                    <button
+                      onClick={handleAddDay}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span>Add Day ({remainingDays} remaining)</span>
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-6">
+                  {days.map((day) => (
+                    <ItineraryDay key={day?.id} day={day} />
+                  ))}
+                  {days.length === 0 && (
+                    <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-200">
+                      <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                      <p className="text-gray-500 text-lg mb-2">No days planned yet</p>
+                      <p className="text-gray-400">Click "Add Day" to start planning your itinerary</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {showCollaboratorModal && (
-        <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Add Collaborator</h2>
-            <p className="text-gray-600 mb-4">
-              Enter email address to add a collaborator
-            </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const email = e.target.email.value;
-                handleAddCollaborator(email);
-              }}
-            >
-              <input
-                type="email"
-                name="email"
-                placeholder="Enter email address"
-                className="w-full px-4 py-2 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4"
-                required
-              />
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowCollaboratorModal(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                >
-                  Add
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {saveSuccess && (
-        <div className="fixed top-4 right-4 bg-green-100 text-green-800 p-3 rounded-lg shadow">
-          Itinerary saved successfully!
-        </div>
-      )}
-      {saveError && (
-        <div className="fixed top-4 right-4 bg-red-100 text-red-800 p-3 rounded-lg shadow">
-          Error: {saveError}
-        </div>
-      )}
-    </DndContext>
+      </DndContext>
+    </>
   );
 }
 
