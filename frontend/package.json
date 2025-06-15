@@ -29,6 +29,8 @@
     "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.4.1",
+    "sockjs-client": "^1.6.1",
+    "stompjs": "^2.3.3",
     "use-debounce": "^10.0.4",
     "uuid": "^11.1.0",
     "zod": "^3.24.2",

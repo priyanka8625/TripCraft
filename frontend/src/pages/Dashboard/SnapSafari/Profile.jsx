@@ -2,12 +2,30 @@ import { FaHeart, FaComment } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getUserProfile } from "../../../services/userService";
 
 function Profile({ posts, onPostClick, onAddPost }) {
   const [userPosts, setUserPosts] = useState([]);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     setUserPosts(posts || []);
+
+    const fetchData = async () => {
+      try {
+        // Fetch user profile
+        const userData = await getUserProfile();
+        setUser({
+          name: userData?.name || 'Unknown User',
+          // name: 'Priyanka',
+          role: 'Traveler',
+          avatar: '/img/profile_pic.jpg' // Fallback avatar
+        });
+      } catch (err) {
+        setError(err.message || 'Failed to fetch data');
+      }
+    }
+    fetchData();
   }, [posts]);
 
   const handleImageUpload = (image, caption) => {
@@ -29,7 +47,7 @@ function Profile({ posts, onPostClick, onAddPost }) {
               U
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">current_user</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{user.name}</h2>
               <p className="text-gray-600 mt-1">
                 Capturing moments through my lens 📸
               </p>

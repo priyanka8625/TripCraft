@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-export const useItineraryStore = create((set) => ({
+export const useItineraryStore = create((set, get) => ({
+  tripId: undefined, // Initial state
   days: [],
   collaborators: [],
   title: '',
@@ -9,6 +10,7 @@ export const useItineraryStore = create((set) => ({
   endDate: '',
   budget: 0,
   suggestedPeople: 1,
+  
   addDay: (date) =>
     set((state) => ({
       days: [
@@ -20,9 +22,10 @@ export const useItineraryStore = create((set) => ({
         },
       ],
     })),
+    
   addItem: (dayId, item) =>
     set((state) => {
-      console.log('addItem - dayId:', dayId, 'item:', item); // Debug item being added
+      console.log('addItem - dayId:', dayId, 'item:', item);
       const newState = {
         days: state.days.map((day) =>
           day.id === dayId
@@ -30,9 +33,10 @@ export const useItineraryStore = create((set) => ({
             : day
         ),
       };
-      console.log('addItem - new state:', newState); // Debug state after adding
+      console.log('addItem - new state:', newState);
       return newState;
     }),
+    
   updateItem: (dayId, updatedItem) =>
     set((state) => ({
       days: state.days.map((day) =>
@@ -46,6 +50,7 @@ export const useItineraryStore = create((set) => ({
           : day
       ),
     })),
+    
   removeItem: (dayId, itemId) =>
     set((state) => ({
       days: state.days.map((day) =>
@@ -54,6 +59,7 @@ export const useItineraryStore = create((set) => ({
           : day
       ),
     })),
+    
   reorderItems: (dayId, items) =>
     set((state) => ({
       days: state.days.map((day) =>
@@ -62,34 +68,46 @@ export const useItineraryStore = create((set) => ({
           : day
       ),
     })),
+    
   addCollaborator: (email) =>
     set((state) => ({
       collaborators: [...state.collaborators, email],
     })),
+    
+    setTripId: (id) => set({ tripId: id }), // Add setter
+    
   setCollaborators: (collaborators) =>
     set(() => ({
       collaborators,
     })),
+    
   setTitle: (title) =>
     set(() => ({
       title,
     })),
+    
   setDestination: (destination) =>
     set(() => ({
       destination,
     })),
+    
   setDates: (startDate, endDate) =>
     set(() => ({
       startDate,
       endDate,
     })),
+    
   setBudget: (budget) =>
     set(() => ({
       budget,
     })),
+    
   setSuggestedPeople: (suggestedPeople) =>
     set(() => ({
       suggestedPeople,
     })),
-    setDays: (newDays) => set({ days: newDays }), // Add setDays
+    
+  setDays: (newDays) => set({ days: newDays }),
+  
+  getState: () => get(),
 }));

@@ -34,10 +34,10 @@ function App() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     if (name === 'startDate') {
-      setFormData({ 
-        ...formData, 
+      setFormData({
+        ...formData,
         [name]: value,
-        endDate: formData.endDate && formData.endDate < value ? '' : formData.endDate 
+        endDate: formData.endDate && formData.endDate < value ? '' : formData.endDate
       });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -135,7 +135,7 @@ function App() {
     }
     if (validateStep()) {
       console.log("data", formData);
-      
+
       setIsLoading(true);
       setApiError('');
 
@@ -143,13 +143,14 @@ function App() {
         if (method === 'ai') {
           // Existing AI trip creation
           console.log('ai');
-          
+
           const response = await createTripWithAi(formData);
           navigate('/dashboard/itinerary', { state: { tripId: response.trip.id } });
         } else if (method === 'manual') {
           console.log("manual");
-          
+
           // New manual trip creation
+          // In CreateTripForm, after creating a manual trip
           const tripData = {
             title: formData.title,
             destination: formData.destination,
@@ -158,14 +159,20 @@ function App() {
             people: formData.people,
             budget: formData.budget,
             preferences: formData.preferences,
-            collaborators: formData.collaborators.map(email => ({ email })), // Format collaborators
+            collaborators: formData.collaborators.map(email => ({ email })),
           };
-          console.log("before");
-          
-          const response = await createManualTrip(tripData); // Call the new service method
-          console.log("before");
-          console.log('Recommended Spots:', response.spots); // Log the spots to the console
-          navigate('/dashboard/plan/manual/generate', { state: { tripId: response.tripId, tripData, spots:response.spots } });
+
+          const response = await createManualTrip(tripData);
+          console.log('Recommended Spots:', response);
+          navigate('/dashboard/plan/manual/generate', {
+            state: {
+              tripId: response.tripId,
+              tripData,
+              lunch: response.lunch,
+              stay: response.stay,
+              spots: response.spots
+            }
+          });
         }
       } catch (error) {
         setApiError(error.response?.data?.message || 'Failed to create trip');
@@ -189,11 +196,10 @@ function App() {
             {[1, 2, 3, 4].map((step) => (
               <div
                 key={step}
-                className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
-                  step <= currentStep
+                className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${step <= currentStep
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200 scale-110'
                     : 'bg-gray-200 text-gray-600'
-                }`}
+                  }`}
               >
                 {step}
               </div>
@@ -201,11 +207,11 @@ function App() {
           </div>
         </div>
 
-        <form  onSubmit={(e) => {
-    e.preventDefault();
-    console.log('Unexpected form submission', { currentStep }); // Debug
-  }}
-  className="space-y-6">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          console.log('Unexpected form submission', { currentStep }); // Debug
+        }}
+          className="space-y-6">
           {apiError && (
             <div className="bg-red-50 text-red-700 p-4 rounded-xl">
               {apiError}
@@ -340,11 +346,10 @@ function App() {
                     key={preference}
                     type="button"
                     onClick={() => handlePreferenceChange(preference)}
-                    className={`px-4 py-2 rounded-xl border transition-all duration-200 capitalize text-sm ${
-                      formData.preferences.includes(preference)
+                    className={`px-4 py-2 rounded-xl border transition-all duration-200 capitalize text-sm ${formData.preferences.includes(preference)
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-lg shadow-emerald-200'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-500 hover:bg-emerald-50'
-                    }`}
+                      }`}
                   >
                     {preference}
                   </button>

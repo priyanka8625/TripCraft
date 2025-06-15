@@ -5,12 +5,11 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import DisplayItinerary from '../pages/Dashboard/PlanItinerary/DisplayItinerary';
 import CreateTripForm from '../pages/Dashboard/PlanItinerary/CreateTripForm';
 import PlanMethodSelection from '../pages/Dashboard/PlanItinerary/PlanMethodSelection';
-import GenItineraryJSX from '../GenItineraryJSX/PlanFromScratch';
-// import AIChatBot from "../components/AiChatBot/AIChatBot";
+import PlanFromScratch from '../GenItineraryJSX/PlanFromScratch';
 import Trips from '../pages/Dashboard/Trips';
 import SnapSafariRoutes from './SnapSafariRoutes';
-import PlanFromScratch from '../GenItineraryJSX/PlanFromScratch';
 import Chatbot from '../pages/Dashboard/Chatbot';
+
 function DashboardRoutes() {
   return (
     <Routes>
@@ -18,14 +17,12 @@ function DashboardRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="plan" element={<PlanMethodSelection />} />
         <Route path="plan/:method" element={<CreateTripForm />} />
-        {/* <Route path="plan/manual" element={<CreateTripForm />} /> */}
         <Route path="itinerary" element={<DisplayItinerary />} />
         <Route path="trips" element={<Trips />} />
-        <Route path="plan/manual/generate" element={<PlanFromScratch />} />
-{/*         <Route path='ai-assistant' element={<AIChatBot />} /> */}
+        {/* Updated route to handle both generate and edit modes */}
+        <Route path="plan/manual/:mode" element={<PlanFromScratch />} />
         <Route path='snap-safari/*' element={<SnapSafariRoutes/>} />
         <Route path='ai-assistant' element={<Chatbot />} />
-        
       </Route>
     </Routes>
   );

@@ -6,7 +6,7 @@ import RestaurantCard from '../../../components/Dashboard/PlanItinerary/Restaura
 import HotelCard from '../../../components/Dashboard/PlanItinerary/HotelCard.jsx';
 import MapComponent from '../../../components/Dashboard/PlanItinerary/MapComponent.jsx';
 import LoadingScreen from '../../../components/Dashboard/PlanItinerary/LoadingScreen.jsx';
-import { getItineraryWithTripId } from '../../../services/tripService.js'; // Adjust the path to your service file
+import { getItineraryWithTripId } from '../../../services/tripService.js';
 
 export default function DisplayItinerary() {
   const [activeDay, setActiveDay] = useState(0);
@@ -20,62 +20,8 @@ export default function DisplayItinerary() {
   const [error, setError] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
-  const { tripId } = location.state || {};
+  const { tripId, tripData } = location.state || {};
   const [focusedLocation, setFocusedLocation] = useState(null);
-  const itineraryData = {
-    itinerary: [
-    {
-      day: 1,
-      date: "2025-04-25",
-      activities: [
-        { name: "Agrasen ki Baoli", category: "Offbeat", location: "Connaught Place", time_slot: "09:00-11:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.0, latitude: 28.6284, longitude: 77.2215 },
-        { name: "Travel to Raj Ghat", category: "Travel", distance: 5, distanceUnit: "km", duration: 7, durationUnit: "minutes", estimatedCost: 160, time_slot: "19:00-19:06", latitude: 28.6366, longitude: 77.2475 },
-        { name: "Raj Ghat", category: "Cultural", location: "Ring Road", time_slot: "11:00-13:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.2, latitude: 28.6366, longitude: 77.2475 },
-        { name: "Travel to Mehrauli Archaeological Park", category: "Travel", distance: 17, distanceUnit: "km", duration: 23, durationUnit: "minutes", estimatedCost: 544, time_slot: "19:06-19:29", latitude: 28.5248, longitude: 77.1858 },
-        { name: "Mehrauli Archaeological Park", category: "Offbeat", location: "Mehrauli", time_slot: "13:00-15:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.2, latitude: 28.5248, longitude: 77.1858 },
-        { name: "Travel to Lotus Temple", category: "Travel", distance: 9, distanceUnit: "km", duration: 12, durationUnit: "minutes", estimatedCost: 288, time_slot: "19:29-19:41", latitude: 28.5535, longitude: 77.2588 },
-        { name: "Lotus Temple", category: "Popular", location: "Kalkaji", time_slot: "15:00-19:00", duration: 4.0, durationUnit: "hours", estimatedCost: 0, rating: 4.3, latitude: 28.5535, longitude: 77.2588 }
-      ],
-      lunch: [
-        { name: "The Big Chill", location: "Khan Market", price: 1500, rating: 4.4, latitude: 28.6007, longitude: 77.225 },
-        { name: "Karim's", location: "Jama Masjid", price: 500, rating: 4.4, latitude: 28.6506, longitude: 77.2344 },
-        { name: "Al Jawahar", location: "Old Delhi", price: 600, rating: 4.3, latitude: 28.6509, longitude: 77.2348 }
-      ],
-      stay: [
-        { name: "The Lodhi", location: "Lodhi Road", pricePerNight: 20000, rating: 4.7, latitude: 28.5921, longitude: 77.2226 },
-        { name: "The Oberoi, New Delhi", location: "Dr. Zakir Hussain Marg", pricePerNight: 28000, rating: 4.9, latitude: 28.6037, longitude: 77.2225 },
-        { name: "The Claridges, New Delhi", location: "Dr APJ Abdul Kalam Road", pricePerNight: 19000, rating: 4.6, latitude: 28.59, longitude: 77.2 },
-        { name: "ITC Maurya", location: "Sardar Patel Marg", pricePerNight: 18000, rating: 4.6, latitude: 28.5924, longitude: 77.1981 }
-      ]
-    },
-    {
-      day: 2,
-      date: "2025-04-26",
-      activities: [
-        { name: "ISKCON Temple Delhi", category: "Popular", location: "Sant Nagar", time_slot: "09:00-11:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.4, latitude: 28.6267, longitude: 77.2098 },
-        { name: "Travel to Chhatarpur Temple", category: "Travel", distance: 19, distanceUnit: "km", duration: 24, durationUnit: "minutes", estimatedCost: 608, time_slot: "19:00-19:24", latitude: 28.5086, longitude: 77.1531 },
-        { name: "Chhatarpur Temple", category: "Popular", location: "Chhatarpur", time_slot: "11:00-13:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.4, latitude: 28.5086, longitude: 77.1531 },
-        { name: "Travel to Lodhi Garden", category: "Travel", distance: 14, distanceUnit: "km", duration: 19, durationUnit: "minutes", estimatedCost: 448, time_slot: "19:24-19:43", latitude: 28.5931, longitude: 77.2167 },
-        { name: "Lodhi Garden", category: "Nature", location: "Lodhi Estate", time_slot: "13:00-15:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.5, latitude: 28.5931, longitude: 77.2167 },
-        { name: "Travel to India Gate", category: "Travel", distance: 3, distanceUnit: "km", duration: 4, durationUnit: "minutes", estimatedCost: 96, time_slot: "19:43-19:47", latitude: 28.6129, longitude: 77.2295 },
-        { name: "India Gate", category: "Popular", location: "New Delhi", time_slot: "15:00-19:00", duration: 4.0, durationUnit: "hours", estimatedCost: 0, rating: 4.7, latitude: 28.6129, longitude: 77.2295 }
-      ],
-      lunch: [
-        { name: "The Big Chill", location: "Khan Market", price: 1500, rating: 4.4, latitude: 28.6007, longitude: 77.225 },
-        { name: "Karim's", location: "Jama Masjid", price: 500, rating: 4.4, latitude: 28.6506, longitude: 77.2344 },
-        { name: "Al Jawahar", location: "Old Delhi", price: 600, rating: 4.3, latitude: 28.6509, longitude: 77.2348 }
-      ],
-      stay: [
-        { name: "The Taj Mahal Hotel", location: "Mansingh Road", pricePerNight: 22000, rating: 4.7, latitude: 28.6119, longitude: 77.2195 },
-        { name: "The Imperial, New Delhi", location: "Janpath", pricePerNight: 17000, rating: 4.6, latitude: 28.6124, longitude: 77.2175 },
-        { name: "The Oberoi, New Delhi", location: "Dr. Zakir Hussain Marg", pricePerNight: 28000, rating: 4.9, latitude: 28.6037, longitude: 77.2225 },
-        { name: "Shangri-La Eros, New Delhi", location: "Connaught Place", pricePerNight: 16000, rating: 4.5, latitude: 28.628, longitude: 77.22 }
-      ]
-    }
-    // Add more days as needed
-  ]
-};
-
 
   useEffect(() => {
     const fetchItinerary = async () => {
@@ -88,11 +34,60 @@ export default function DisplayItinerary() {
       try {
         setIsLoading(true);
         const data = await getItineraryWithTripId(tripId);
-        // Assuming the response is an array of itinerary days (matching your backend response structure)
         setTripDays(data.itinerary || []);
-        //if data is of the older format
-        if(data.itinerary?.activities)
-          setTripDays(itineraryData.itinerary);//set demo data
+        // If data is in the older format, use demo data
+        if (data.itinerary?.activities) {
+          setTripDays([
+            {
+              day: 1,
+              date: "2025-04-25",
+              activities: [
+                { name: "Agrasen ki Baoli", category: "Offbeat", location: "Connaught Place", time_slot: "09:00-11:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.0, latitude: 28.6284, longitude: 77.2215 },
+                { name: "Travel to Raj Ghat", category: "Travel", distance: 5, distanceUnit: "km", duration: 7, durationUnit: "minutes", estimatedCost: 160, time_slot: "19:00-19:06", latitude: 28.6366, longitude: 77.2475 },
+                { name: "Raj Ghat", category: "Cultural", location: "Ring Road", time_slot: "11:00-13:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.2, latitude: 28.6366, longitude: 77.2475 },
+                { name: "Travel to Mehrauli Archaeological Park", category: "Travel", distance: 17, distanceUnit: "km", duration: 23, durationUnit: "minutes", estimatedCost: 544, time_slot: "19:06-19:29", latitude: 28.5248, longitude: 77.1858 },
+                { name: "Mehrauli Archaeological Park", category: "Offbeat", location: "Mehrauli", time_slot: "13:00-15:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.2, latitude: 28.5248, longitude: 77.1858 },
+                { name: "Travel to Lotus Temple", category: "Travel", distance: 9, distanceUnit: "km", duration: 12, durationUnit: "minutes", estimatedCost: 288, time_slot: "19:29-19:41", latitude: 28.5535, longitude: 77.2588 },
+                { name: "Lotus Temple", category: "Popular", location: "Kalkaji", time_slot: "15:00-19:00", duration: 4.0, durationUnit: "hours", estimatedCost: 0, rating: 4.3, latitude: 28.5535, longitude: 77.2588 }
+              ],
+              lunch: [
+                { name: "The Big Chill", location: "Khan Market", price: 1500, rating: 4.4, latitude: 28.6007, longitude: 77.225 },
+                { name: "Karim's", location: "Jama Masjid", price: 500, rating: 4.4, latitude: 28.6506, longitude: 77.2344 },
+                { name: "Al Jawahar", location: "Old Delhi", price: 600, rating: 4.3, latitude: 28.6509, longitude: 77.2348 }
+              ],
+              stay: [
+                { name: "The Lodhi", location: "Lodhi Road", pricePerNight: 20000, rating: 4.7, latitude: 28.5921, longitude: 77.2226 },
+                { name: "The Oberoi, New Delhi", location: "Dr. Zakir Hussain Marg", pricePerNight: 28000, rating: 4.9, latitude: 28.6037, longitude: 77.2225 },
+                { name: "The Claridges, New Delhi", location: "Dr APJ Abdul Kalam Road", pricePerNight: 19000, rating: 4.6, latitude: 28.59, longitude: 77.2 },
+                { name: "ITC Maurya", location: "Sardar Patel Marg", pricePerNight: 18000, rating: 4.6, latitude: 28.5924, longitude: 77.1981 }
+              ]
+            },
+            {
+              day: 2,
+              date: "2025-04-26",
+              activities: [
+                { name: "ISKCON Temple Delhi", category: "Popular", location: "Sant Nagar", time_slot: "09:00-11:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.4, latitude: 28.6267, longitude: 77.2098 },
+                { name: "Travel to Chhatarpur Temple", category: "Travel", distance: 19, distanceUnit: "km", duration: 24, durationUnit: "minutes", estimatedCost: 608, time_slot: "19:00-19:24", latitude: 28.5086, longitude: 77.1531 },
+                { name: "Chhatarpur Temple", category: "Popular", location: "Chhatarpur", time_slot: "11:00-13:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.4, latitude: 28.5086, longitude: 77.1531 },
+                { name: "Travel to Lodhi Garden", category: "Travel", distance: 14, distanceUnit: "km", duration: 19, durationUnit: "minutes", estimatedCost: 448, time_slot: "19:24-19:43", latitude: 28.5931, longitude: 77.2167 },
+                { name: "Lodhi Garden", category: "Nature", location: "Lodhi Estate", time_slot: "13:00-15:00", duration: 2.0, durationUnit: "hours", estimatedCost: 0, rating: 4.5, latitude: 28.5931, longitude: 77.2167 },
+                { name: "Travel to India Gate", category: "Travel", distance: 3, distanceUnit: "km", duration: 4, durationUnit: "minutes", estimatedCost: 96, time_slot: "19:43-19:47", latitude: 28.6129, longitude: 77.2295 },
+                { name: "India Gate", category: "Popular", location: "New Delhi", time_slot: "15:00-19:00", duration: 4.0, durationUnit: "hours", estimatedCost: 0, rating: 4.7, latitude: 28.6129, longitude: 77.2295 }
+              ],
+              lunch: [
+                { name: "The Big Chill", location: "Khan Market", price: 1500, rating: 4.4, latitude: 28.6007, longitude: 77.225 },
+                { name: "Karim's", location: "Jama Masjid", price: 500, rating: 4.4, latitude: 28.6506, longitude: 77.2344 },
+                { name: "Al Jawahar", location: "Old Delhi", price: 600, rating: 4.3, latitude: 28.6509, longitude: 77.2348 }
+              ],
+              stay: [
+                { name: "The Taj Mahal Hotel", location: "Mansingh Road", pricePerNight: 22000, rating: 4.7, latitude: 28.6119, longitude: 77.2195 },
+                { name: "The Imperial, New Delhi", location: "Janpath", pricePerNight: 17000, rating: 4.6, latitude: 28.6124, longitude: 77.2175 },
+                { name: "The Oberoi, New Delhi", location: "Dr. Zakir Hussain Marg", pricePerNight: 28000, rating: 4.9, latitude: 28.6037, longitude: 77.2225 },
+                { name: "Shangri-La Eros, New Delhi", location: "Connaught Place", pricePerNight: 16000, rating: 4.5, latitude: 28.628, longitude: 77.22 }
+              ]
+            }
+          ]);
+        }
       } catch (err) {
         setError(err.message || 'Error fetching itinerary');
       } finally {
@@ -111,25 +106,66 @@ export default function DisplayItinerary() {
   };
 
   const handleEditItinerary = () => {
-    const formattedActivities = tripDays.flatMap((day, index) =>
-      day.activities.map((activity) => ({
-        id: `${activity.name}-${index}`,
-        name: activity.name,
-        category: activity.category || 'unknown',
-        location: activity.location || 'N/A',
-        estimatedCost: activity.estimatedCost || 0,
-        time_slot: activity.time_slot || 'N/A',
-        rating: activity.rating || 0,
-        latitude: activity.latitude || 0,
-        longitude: activity.longitude || 0,
-      }))
-    );
+    // Format the itinerary to match the structure expected by PlanFromScratch
+    const formattedItinerary = tripDays.map((day) => ({
+      id: crypto.randomUUID(),
+      date: day.date,
+      items: [
+        ...day.activities.map((activity) => ({
+          id: crypto.randomUUID(),
+          name: activity.name,
+          category: activity.category || 'Popular',
+          location: activity.location || 'N/A',
+          estimatedCost: activity.estimatedCost || 0,
+          timeSlot: activity.time_slot || 'N/A',
+          rating: activity.rating || 0,
+          latitude: activity.latitude || null,
+          longitude: activity.longitude || null,
+          duration: activity.duration || 2,
+          durationUnit: activity.durationUnit || 'hours',
+          type: activity.category === 'Travel' ? 'travel' : 'spot',
+        })),
+        ...day.lunch.map((lunch) => ({
+          id: crypto.randomUUID(),
+          name: lunch.name,
+          location: lunch.location || 'N/A',
+          price: lunch.price || 0,
+          rating: lunch.rating || 0,
+          latitude: lunch.latitude || null,
+          longitude: lunch.longitude || null,
+          type: 'lunch',
+          timeSlot: 'N/A',
+          duration: 1,
+          durationUnit: 'hours',
+        })),
+        ...day.stay.map((stay) => ({
+          id: crypto.randomUUID(),
+          name: stay.name,
+          location: stay.location || 'N/A',
+          pricePerNight: stay.pricePerNight || 0,
+          rating: stay.rating || 0,
+          latitude: stay.latitude || null,
+          longitude: stay.longitude || null,
+          type: 'stay',
+          timeSlot: 'N/A',
+          duration: 1,
+          durationUnit: 'hours',
+        })),
+      ],
+    }));
 
-    navigate('/dashboard/plan/manual/generate', {
+    navigate('/dashboard/plan/manual/edit', {
       state: {
         tripId,
-        tripData: location.state?.tripData,
-        spots: formattedActivities,
+        tripData: {
+          title: tripData?.title || 'My Trip',
+          destination: tripData?.destination || '',
+          startDate: tripData?.startDate || '',
+          endDate: tripData?.endDate || '',
+          budget: tripData?.budget || 0,
+          people: tripData?.people || 1,
+        },
+        itinerary: formattedItinerary,
       },
     });
   };
