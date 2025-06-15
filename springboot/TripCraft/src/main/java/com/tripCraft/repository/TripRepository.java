@@ -14,7 +14,7 @@ public interface TripRepository extends MongoRepository<Trip, String>{
 	List<Trip> findByUserIdAndStartDateAfter(String userId, LocalDate date);
 	boolean existsByDestination(String destination);
     List<Trip> findByDestination(String destination);
-    Trip save(Trip trip);
+   
     @Query("{ $or: [ { 'userId': ?0 }, { 'collaborators.userId': ?0 } ] }")
     List<Trip> findTripsSharedWithUser(String email);
     List<Trip> findByCollaboratorsEmail(String email);

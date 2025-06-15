@@ -106,21 +106,23 @@ def generate_itinerary(user_input):
     for i, a in enumerate(valid_activities):
         a["score"] = float(scores[i])
 
-    itinerary = []
-    used_ids = set()
+        itinerary = []
+    used_locations = set()
 
-    for day in range(1, days + 1):
+    for day in range(1, days + 1):  
         current_time = datetime.strptime("09:00", "%H:%M")
         daily_cost, daily_duration = 0, 0
         day_entries = []
 
-        day_activities = [a for a in valid_activities if a["id"] not in used_ids]
+        day_activities = [a for a in valid_activities 
+                          if (a["activity"]["latitude"], a["activity"]["longitude"]) not in used_locations]
         day_activities.sort(key=lambda x: x["score"], reverse=True)
 
         for a in day_activities:
+            loc_tuple = (a["activity"]["latitude"], a["activity"]["longitude"])
             cost = float(a["activity"]["estimatedCost"]) * people
             dur = float(a.get("duration", 2))
-            if daily_cost + cost <= daily_budget and daily_duration + dur <= 10:
+            if daily_cost + cost <= daily_budget and daily_duration + dur <= MAX_HOURS_PER_DAY:
                 start_str, end_str = assign_time_slot(current_time, dur)
                 entry = {
                     "name": a["activity"]["name"],
@@ -136,44 +138,12 @@ def generate_itinerary(user_input):
                     "date": (start_date + timedelta(days=day - 1)).strftime("%Y-%m-%d")
                 }
                 day_entries.append(entry)
-                used_ids.add(a["id"])
+                used_locations.add(loc_tuple)
                 daily_cost += cost
                 daily_duration += dur
                 current_time += timedelta(hours=dur)
 
-        # Add travel between activities
-        for i in range(len(day_entries) - 1):
-            from_, to_ = day_entries[i], day_entries[i + 1]
-            idx_from = next((a["matrix_index"] for a in valid_activities if a["activity"]["name"] == from_["name"]), -1)
-            idx_to = next((a["matrix_index"] for a in valid_activities if a["activity"]["name"] == to_["name"]), -1)
-
-            if idx_from == -1 or idx_to == -1:
-                continue
-
-            dist_km = round(distance_matrix[idx_from][idx_to])
-            time_hr = time_matrix[idx_from][idx_to]
-            travel_cost = dist_km * people * 16
-            start_str, end_str = assign_time_slot(current_time, time_hr)
-
-            travel = {
-                "name": f"Travel to {to_['name']}",
-                "category": "Travel",
-                "location": f"Travel from {from_['name']} to {to_['name']}",
-                "distance": dist_km,
-                "distanceUnit": "km",
-                "duration": format_travel_duration(time_hr),
-                "estimatedCost": travel_cost,
-                "time_slot": f"{start_str}-{end_str}",
-                "rating": 0.0,
-                "latitude": to_["latitude"],
-                "longitude": to_["longitude"],
-                "day": day,
-                "date": (start_date + timedelta(days=day - 1)).strftime("%Y-%m-%d")
-            }
-            day_entries.insert(i + 1, travel)
-            current_time += timedelta(hours=time_hr)
-
-        itinerary.append({
+        itinerary.append({ 
             "day": day,
             "date": (start_date + timedelta(days=day - 1)).strftime("%Y-%m-%d"),
             "activities": day_entries,

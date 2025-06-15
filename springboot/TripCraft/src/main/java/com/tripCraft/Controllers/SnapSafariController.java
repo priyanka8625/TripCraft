@@ -84,30 +84,7 @@ public class SnapSafariController {
             response.put("error", "Failed to upload post: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
-//    	if (!userRepository.existsById(userId)) {
-//    	        Map<String, String> response = new HashMap<>();
-//    	        response.put("error", "User does not exist");
-//    	        return ResponseEntity.badRequest().body(response);
-//    	    }
-//        List<String> imageUrls = new ArrayList<>();
-//        for (MultipartFile file : imageFiles) {
-//            String imageUrl = imageUploadService.uploadImage(file);  // Actual Cloudinary upload
-//            imageUrls.add(imageUrl);
-//        }
-//
-//        SnapSafari post = new SnapSafari();
-//        post.setUserId(userId);
-//        post.setDestination(destination);
-//        post.setTitle(title);
-//        post.setCaption(caption);
-//        post.setImages(imageUrls);
-//        post.setLikes(0);
-//        post.setCreatedAt(LocalDateTime.now());
-//        post.setComments(new ArrayList<>());
-//
-////        return ResponseEntity.ok(snapSafariRepository.save(post));
-//        return ResponseEntity.ok().body(snapSafariRepository.save(post));
-    }
+ }
 
     // Get all posts
     @GetMapping
