@@ -51,7 +51,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // Enable CORS with default settings, overridden by corsConfigurationSource
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/status", "/api/auth/logout").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/status", "/api/auth/logout","/add-collaborator").permitAll()
                 .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                 .anyRequest().authenticated()
             )

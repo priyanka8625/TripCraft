@@ -173,10 +173,14 @@ public class TripController {
         List<Destination.Spot> spots = new ArrayList<>();
         List<Destination.Hotel> lunch = new ArrayList<>();
         List<Destination.Hotel> stay = new ArrayList<>();
-
-
+        
+        Destination destination;
+        if(!destinationOpt.isPresent() || destinationOpt.isEmpty() ) {
+        	destination = callGeminiService(trip.getDestination());
+        	
+        }
         if (destinationOpt.isPresent()) {
-            Destination destination = destinationOpt.get();
+             destination = destinationOpt.get();
             
             // ✅ Spots
             if (destination.getSpots() != null) {
@@ -195,7 +199,7 @@ public class TripController {
             }
 
         }
-
+        
 
         Map<String, Object> response = new HashMap<>();
         response.put("tripId", savedTrip.getId());
