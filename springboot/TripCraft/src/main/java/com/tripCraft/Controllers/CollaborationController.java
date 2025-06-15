@@ -53,7 +53,7 @@ public class CollaborationController {
         if (optionalTrip.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Trip not found");
         }
-
+      System.out.println("DEBUGGG FOR COLLAB");
         Trip trip = optionalTrip.get();
 
         // Avoid duplicate collaborators
@@ -73,7 +73,7 @@ public class CollaborationController {
 
         trip.getCollaborators().add(collaborator);
         tripRepository.save(trip);
-
+        System.out.println("DEBUGGG FOR COLLAB");
         // Send email invite
         String subject = "New Trip Added!";
         String body = "Hi there!\n\n"
@@ -86,7 +86,7 @@ public class CollaborationController {
                 + "- Team TripCraft";
 
         emailSenderService.sendEmail(request.getEmail(), subject, body);
-
+        System.out.println("DEBUGGG FOR COLLAB");
         return ResponseEntity.ok("Collaborator added and email sent");
     }
     
